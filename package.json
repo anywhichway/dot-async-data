@@ -1,9 +1,9 @@
 {
-	"name": "dotasync",
+	"name": "dot-async-data",
 	"version": "0.0.2a",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/anywhichway/dot-async.git"
+		"url": "git+https://github.com/anywhichway/dot-async-data.git"
 	},
 	"keywords": [
 		"dot notation",
@@ -12,9 +12,9 @@
 	],
 	"author": "Simon Y. Blackwell <syblackwell@anywhichway.com> (http://www.github.com/anywhichway)",
 	"bugs": {
-		"url": "https://github.com/anywhichway/dot-async/issues"
+		"url": "https://github.com/anywhichway/dot-async-data/issues"
 	},
-	"homepage": "https://github.com/anywhichway/dot-async#readme",
+	"homepage": "https://github.com/anywhichway/dot-async-data#readme",
 	"scripts": {
 		"test": "mocha ./test/index.js --require esm"
 	},

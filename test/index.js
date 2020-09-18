@@ -1,11 +1,11 @@
 var chai,
 	expect,
-	dotAsync,
+	dotAsyncData,
 	asyncStorage;
 if(typeof(window)==="undefined") {
 	chai = require("chai");
 	expect = chai.expect;
-	dotAsync = require("../index.js");
+	dotAsyncData = require("../index.js");
 	asyncStorage = require("./asyncStorage.js");
 } else {
 	chai = window.chai;
@@ -16,9 +16,9 @@ function isDataKey(key) {
 	return typeof(key)==="string" && new RegExp("/.*/\#.*").test(key);
 }
 	
-const { $max, $values } = dotAsync;
+const { $max, $values } = dotAsyncData;
 
-describe("dotAsync",async function() {
+describe("dotAsyncData",async function() {
 	const cache = {},
 		db = asyncStorage,
 		joe = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}],f(value) { return value; }},
@@ -33,7 +33,7 @@ describe("dotAsync",async function() {
 	
 	let object;
 	it("create",() => {
-		object = dotAsync(jane,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache});
+		object = dotAsyncData(jane,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache});
 		expect(object).to.be.instanceof(Object)
 	})
 	it("get direct property value",async () => {

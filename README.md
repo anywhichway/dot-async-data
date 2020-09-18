@@ -1,4 +1,4 @@
-# dotasync
+# dot-async-data
 
 Asynchronous dot notation to radically simplify JSON database access.
 
@@ -59,7 +59,7 @@ function isDataKey(key) { // keys take the form '/Classname/#<some id>'
 
 let contact = db.get("/Contact/#1");
 if(contact) {
-	contact = dotAsync(customer,{isDataKey,idKey:"#,db}),
+	contact = dot-async-data(customer,{isDataKey,idKey:"#,db}),
 	billingAddress = await customer.accountInfo.billingInfo.address(),
 	shippingAddress = await customer.accountInfo.shippingAddress;
 	await contact.premier(true);
@@ -88,12 +88,12 @@ You can do this with ANY JSON database that supports `get(key)` and `set(key)`!
 ## Installing
 
 ```
-npm install dotasync
+npm install dot-async-data
 ```
 
 ## Using
 
-`dotAsync` is isomorphic, the `index.js` file can be loaded in a browser or required by NodeJS code.
+`dot-async-data` is isomorphic, the `index.js` file can be loaded in a browser or required by NodeJS code.
 
 See the files `test/index.html` and `test/index.js` for basic examples while we enhance the documentation.
 

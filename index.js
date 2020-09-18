@@ -1,5 +1,5 @@
 (function() {
-	function dotAsync(value,{isDataKey,idKey,db,autoSave,inline,cache}={}) {
+	function dotAsyncData(value,{isDataKey,idKey,db,autoSave,inline,cache}={}) {
 		const listeners = {
 				on: {
 					change: [],
@@ -262,12 +262,12 @@
 	}
 	
 	if(typeof(module)!=="undefined") {
-		module.exports = dotAsync;
-		dotAsync.dotAsync = dotAsync;
+		module.exports = dotAsyncData;
+		dotAsyncData.dotAsyncData = dotAsyncData;
 	}
 	if(typeof(window)!=="undefined") {
-		window.dotAsync = dotAsync;
-		Object.assign(dotAsync,objectAccessors);
+		window.dotAsyncData = dotAsyncData;
+		Object.assign(dotAsyncData,objectAccessors);
 	}
 })();
 
