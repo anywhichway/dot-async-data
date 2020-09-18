@@ -16,7 +16,7 @@ function isDataKey(key) {
 	return typeof(key)==="string" && new RegExp("/.*/\#.*").test(key);
 }
 	
-const { $max, $values } = dotAsyncData;
+const { $max, $values, $map } = dotAsyncData;
 
 describe("dotAsyncData",async function() {
 	const cache = {},
@@ -31,92 +31,129 @@ describe("dotAsyncData",async function() {
 	
 	jane.children = joe.children;
 	
-	let object;
+	let object1, object2;
 	it("create",() => {
-		object = dotAsyncData(jane,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache});
-		expect(object).to.be.instanceof(Object)
+		object1 = dotAsyncData(jane,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache});
+		object2 = dotAsyncData(joe,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache});
+		expect(object1).to.be.instanceof(Object);
+		expect(object2).to.be.instanceof(Object)
 	})
 	it("get direct property value",async () => {
-		const value = await object.name();
+		const value = await object1.name();
 		expect(value).to.equal("jane")
 	});
+	it("set property value",async () => {
+		const value = await object1.name("janet");
+		expect(value).to.equal("janet")
+	});
+	it("get direct property value after change",async () => {
+		const value = await object1.name();
+		expect(value).to.equal("janet")
+	});
 	it("get indirect property value",async () => {
-		const value = await object.husband.name();
+		const value = await object1.husband.name();
 		expect(value).to.equal("joe")
 	});
+	it("set indirect property value",async () => {
+		const value = await object1.husband.name("jake");
+		expect(value).to.equal("jake")
+	});
+	it("get indirect property value after change",async () => {
+		const value = await object1.husband.name();
+		expect(value).to.equal("jake")
+	});
+	it("set property value with on change",async () => {
+		let event;
+		await object1.name.$onchange(ev => event = ev)("joan");
+		setTimeout(() => {
+			expect(typeof(event)).to.equal("object");
+			expect(event.oldvalue).to.equal("janet");
+			expect(event.newvalue).to.equal("joan");
+			expect(event.type).to.equal("change")
+		})
+	});
+	it("set property on same path, different object",async () => {
+		let event;
+		await object2.name.$onchange(ev => event = ev)("bill");
+		setTimeout(() => {
+			expect(typeof(event)).to.equal("object");
+			expect(event.oldvalue).to.equal("jake");
+			expect(event.newvalue).to.equal("bill");
+			expect(event.type).to.equal("change");
+		})
+	});
 	it("invoke",async () => {
-		const value = await object.husband.f['{"test":"test"}']();
+		const value = await object1.husband.f['{"test":"test"}']();
 		expect(value.test).to.equal("test");
 	});
 	it("get related unresolved",async () => {
-		const value = await object.children();
+		const value = await object1.children();
 		expect(value.length).to.equal(3);
 		expect(value.every(item => isDataKey(item))).to.equal(true);
 	});
 	it("get with property",async () => {
-		const value = await object.children.name();
+		const value = await object1.children.name();
 		expect(Array.isArray(value)).to.equal(true);
 		expect(value.length).to.equal(3);
 	});
 	it("get related resolved",async () => {
-		const value = await object.children[$values]();
+		const value = await object1.children[$values]();
 		expect(Array.isArray(value)).to.equal(true);
 		expect(value.length).to.equal(3);
 		expect(value.every(item => item && typeof(item)==="object")).to.equal(true);
 	});
 	it("flush cache",async () => {
 		expect(Object.keys(cache).length).to.be.greaterThan(0);
-		const thecache = await object.$flush();
+		await object1.$flush();
 		expect(Object.keys(cache).length).to.equal(0);
-		expect(thecache).to.equal(cache);
 	});
 	it("get avg",async () => {
-		const value = await object.children.$avg.age();
+		const value = await object1.children.$avg.age();
 		expect(value).to.equal(7.5);
 	});
 	it("get min",async () => {
-		const value = await object.children.$min.age();
+		const value = await object1.children.$min.age();
 		expect(value).to.equal(5);
 	});
 	it("get max",async () => {
-		const value = await object.children.$max.age();
+		const value = await object1.children.$max.age();
 		expect(value).to.equal(10);
 	});
 	it("get max as function",async () => {
-		const value = await object.children[$max].age();
+		const value = await object1.children[$max].age();
 		expect(value).to.equal(10);
 	});
 	it("get count",async () => {
-		const value = await object.children.$count.age();
+		const value = await object1.children.$count.age();
 		expect(value).to.equal(2);
 	});
 	it("get product",async () => {
-		const value = await object.children.$product.age();
+		const value = await object1.children.$product.age();
 		expect(value).to.equal(50);
 	});
 	it("get sum",async () => {
-		const value = await object.children.$sum.age();
+		const value = await object1.children.$sum.age();
 		expect(value).to.equal(15);
 	});
 	it("get RegExp array",async () => {
-		const value = await object[/child.*/].age();
+		const value = await object1[/child.*/].age();
 		expect(Array.isArray(value)).to.equal(true);
 		expect(value.length).to.equal(2);
 	});
 	it("get RegExp array summary",async () => {
-		const value = await object[/child.*/].$product.age();
+		const value = await object1[/child.*/].$product.age();
 		expect(value).to.equal(50);
 	});
 	it("get RegExp value",async () => {
-		const value = await object[/child.*/].name[/mar.*/]();
+		const value = await object1[/child.*/].name[/mar.*/]();
 		expect(Array.isArray(value)).to.equal(true);
 		expect(value.length).to.equal(1);
 		expect(value[0]).to.equal("mary");
 	});
 	it("get transform values",async () => {
-		const value = await object.children[(accum,{age}) => ((accum || (accum=[]),age===undefined||accum.push({age}),accum))]();
+		const value = await object1.children[(values) => values.reduce((accum,{age}) => age===undefined ? accum : (accum.push(age),accum),[])]();
 		expect(Array.isArray(value)).to.equal(true);
 		expect(value.length).to.equal(2);
-		expect(value.every(item => typeof(item.age)==="number")).to.equal(true);
+		expect(value.every(item => typeof(item)==="number")).to.equal(true);
 	});
 });

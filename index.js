@@ -1,78 +1,61 @@
 (function() {
-	function dotAsyncData(value,{isDataKey,idKey,db,autoSave,inline,cache}={}) {
-		const listeners = {
-				on: {
-					change: [],
-					delete: [],
-					save: []
-				}
-			};
-		return new Proxy(value,{
-			get(target,property) {
-				if(property==="$flush") {
-					return () => cache ? Object.keys(cache).reduce((accum,key) => { delete accum[key]; return accum; },cache) : undefined;
-				}
-				const proxy = _dotAsync(target,{isDataKey,idKey,db,autoSave,listeners,inline,cache});
-				return proxy[property];
-			}
-		})
-	}
-	
 	const handlers = {
-		$onchange({listeners},path,cb) {
+		$onchange(listeners,path,cb) {
 			listeners.on.change.push([path,cb]);
 		},
-		$ondelete({listeners},path,cb) {
+		$ondelete(listeners,path,cb) {
 			listeners.on.delete.push([path,cb]);
 		},
-		$onsave({listeners},path,cb) {
+		$onsave(listeners,path,cb) {
 			listeners.on.save.push([path,cb]);
 		}
 	}
 	
-	function _dotAsync(value,options,path=[]) {
+	const listeners = {on:{change:[],delete:[],save:[]}};
+	function dotAsyncData(value,options,path=[]) {
+		path = path.slice();
 		const length = path.length,
-			f = () => {};
-		const proxy = new Proxy(f,{
+			f = () => {},
+			proxy = new Proxy(f,{
 				get(target,property) {
 					if(property==="then") {
-						return target[value];
+						return target[property]
+					}
+					if(property==="$flush") {
+						return () => {
+							if(options.cache) {
+								Object.keys(options.cache).reduce((accum,key) => { delete accum[key]; return accum; },options.cache)
+							}
+							return proxy;
+						}
 					}
 					const handler = handlers[property];
 					if(handler) {
-						return (cb) => handler(options,path.slice(),cb);
+						return (cb) => { handler(listeners,path.slice(),cb); return proxy; }
 					}
 					path[length] = property;
-					return _dotAsync(value,options,path);
+					return dotAsyncData(value,options,path,listeners);
 				},
 				async apply(_,thisArg,argumentsList) {
-					const ctx = typeof(thisArg)==="function" ? value : thisArg;
+					const ctx = typeof(thisArg)==="function" ? value : thisArg||value;
 					path = path.slice(0,length);
-					if(length===1) {
-						return value[path[0]];
-					}
-					return exec(ctx,path,argumentsList.length,argumentsList[0],options,ctx);
+					return exec(ctx,path,argumentsList.length,argumentsList[0],options,ctx,listeners);
 				}
 			});
 		return proxy;
 	}
 	
 	const objectAccessors = {
-		$count:  (accum,value,i,values) => values.length,
-		$avg:  (accum,value,i,values) => {
-			accum || (accum = {value:0,count:0}); 
-			if(typeof(value)==="number") { accum.count++; accum.value+=value; }
-			if(i===values.length-1) { return accum.count===0 ? 0 : accum.value/accum.count };
-			return accum;
-		},
-		$min:   (accum,value) => typeof(value)==="number" && value < (typeof(accum)==="number" ? accum : Infinity) ? value :  accum,
-		$max:  (accum,value) => typeof(value)==="number" && value > (typeof(accum)==="number" ? accum : -Infinity) ? value :  accum,
-		$sum:  (accum,value) => typeof(value)==="number" ?  value += (typeof(accum)==="number" ? accum : 0) : accum,
-		$product:  (accum,value) => typeof(value)==="number" ? value *= (typeof(accum)==="number" ? accum : 1) : accum,
-		$values: (accum,value,i,values) => values
+		$count: (values) => values.length,
+		$avg:  (values) => { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : accum,0)/i; },
+		$min:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value < accum ? value : accum,Infinity),
+		$max:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value > accum ? value : accum,-Infinity),
+		$sum:  (values) => values.reduce((accum,value) => typeof(value)==="number" ? value += accum : accum,0),
+		$product:  (values) => values.reduce((accum,value) => typeof(value)==="number" ? value *= accum : accum,1),
+		$values: (values) => values
 	}
 	
-	async function exec(target,path,argCount,arg,{isDataKey,idKey,db,autoSave,listeners,inline,cache}={},previous,recursing) {
+	async function exec(target,path,argCount,arg,{isDataKey,idKey,db,autoSave,inline,cache}={},previous,listeners,recursing) {
 		const cacheGet =  async (key) => cache ? cache[key]||(cache[key] =  await db.get(key)) : await db.get(key);
 		path = Array.isArray(path) ? path : path.split(".");
 		if(recursing===undefined) {
@@ -90,15 +73,16 @@
 							return test;
 						}
 						if(test instanceof RegExp) {
-							return (accum,item,i,array) => {
-								if(Array.isArray(array)) {
-									accum || (accum = []);
-									if(test.test(item+"")) {
-										accum.push(item);
-									}
-									return accum;
+							return (value) => {
+								if(Array.isArray(value)) {
+									return value.reduce((accum,item) => {
+										if(test.test(item+"")) {
+											accum.push(item);
+										}
+										return accum;
+									},[])
 								}
-								return test.test(accum+"") ? accum : undefined;
+								return test.test(value+"") ? value : undefined;
 							}
 						}
 					} catch(e) {
@@ -116,8 +100,7 @@
 		let value = isDataKey && db && isDataKey(target) ? cacheGet(target) : target,
 			oldvalue,
 			dbkey,
-			dbvalue,
-			saved;
+			dbvalue;
 		if(path.length>0 && (!value || typeof(value)!=="object")) {
 			return;
 		}
@@ -131,35 +114,29 @@
 			}
 
 			if(Array.isArray(previous) && !previous.resolved) {
-				const values = [];
+				let filter;
 				for(let i=0;i<previous.length;i++) {
 					let item = previous[i];
 					if(isDataKey && isDataKey(item)) {
-						item =  await cacheGet(item);
-					}
-					if(item!==undefined) {
-						values.push(item);
+						if(!(previous[i] =  await cacheGet(item)) && !filter) {
+							filter = true;
+						}
 					}
 				}
-				if(previous===value) {
-					value = values;
-				}
-				previous = values;
+				previous = filter ? previous.filter(item => item!=null) : previous;
 				previous.resolved = true;
 			}
 			
 			if(value!==previous && Array.isArray(value)  && !value.resolved) {
-				const values = [];
 				for(let i=0;i<value.length;i++) {
 					let item = value[i];
 					if(isDataKey && isDataKey(item)) {
-						item =  await cacheGet(item);
-					}
-					if(item!==undefined) {
-						values.push(item);
+						if(!(value[i] =  await cacheGet(item)) && !filter) {
+							filter = true;
+						}
 					}
 				}
-				value = values;
+				value = filter ? value.filter(item => item!=null) : value;
 				value.resolved = true;
 			}
 			
@@ -183,10 +160,19 @@
 				} else {
 					value[key] = arg;
 				}
+				let saved;
 				if(dbvalue && autoSave) {
 					await db.set(dbkey,dbvalue);
 					saved = true;
 				}
+				const newvalue = arg,
+					object = value;
+				setTimeout(() => {
+					listeners.on.change.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item === path[i]) && cb({type:"change",newvalue,oldvalue,key,object,path:match}))
+					if(saved) {
+						listeners.on.save.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item === path[i]) && cb({type:"save",key:dbkey,value:dbvalue,path:match}))
+					}
+				});
 				value = arg;
 				break;
 			}
@@ -198,12 +184,12 @@
 					const values = [];
 					path = path.slice(i+1);
 					for(const item of value) {
-						let result = await exec(item,path,0,undefined,{isDataKey,idKey,db,autoSave,inline,cache},value,true);
+						let result = await exec(item,path,0,undefined,{isDataKey,idKey,db,autoSave,inline,cache},value,listeners,true);
 						if(result!=undefined) {
 							values.push(result); //fkey ? await fkey(result) : result
 						}
 					}
-					value = fkey ? values.reduce(fkey,undefined) : values;
+					value = fkey ? fkey.call(value,values) : values;
 				} else { // handle objects used to store references {idref1: value, idref2: value, ...}
 					const entries = Object.entries(value);
 					let values = [];
@@ -233,8 +219,12 @@
 			} else if(key==="$delete") {
 				if(isDataKey && isDataKey(dbkey) && db) {
 					await db.delete(dbkey);
-					delete cache[dbkey]
+					delete cache[dbkey];
+					setTimeout(() => {
+						listeners.on.delete.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item === path[i])  && cb({type:"delete",key:dbkey,path:match}))
+					})
 				}
+				value = undefined;
 			} else {
 				value = value[key]; //fkey ?  await fkey.call(dbvalue||target,value) : value[key];
 				if(value===undefined) {
@@ -246,24 +236,13 @@
 			}
 			previous = value;
 		}
-		setTimeout(() => {
-			if(argCount>0) {
-				if(arg===undefined) {
-					listeners.on.delete.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item = path[i])  && cb({type:"delete",oldvalue,path:match}))
-				} else {
-					listeners.on.change.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item = path[i]) && cb({type:"change",value,oldvalue,path:match}))
-					if(saved) {
-						listeners.on.save.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item = path[i]) && cb({type:"save",key:dbkey,value:dbvalue,path:match}))
-					}
-				}
-			}
-		});
 		return value;
 	}
 	
 	if(typeof(module)!=="undefined") {
 		module.exports = dotAsyncData;
 		dotAsyncData.dotAsyncData = dotAsyncData;
+		Object.assign(dotAsyncData,objectAccessors);
 	}
 	if(typeof(window)!=="undefined") {
 		window.dotAsyncData = dotAsyncData;

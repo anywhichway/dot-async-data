@@ -8,7 +8,17 @@ Tired of tracking down typographical errors in strings that have to be compiled 
 
 Angry about all the errors thrown by navigating incomplete JSON records?
 
-What if you could just load a single root object and navigate to any of its leaf nodes with dot notation (even those that require loading additional data)?
+What if you could:
+
+1) Load a single root object and navigate to any of its leaf nodes with dot notation (even those that require loading additional data)?
+
+2) Automatically save data when changes are made?
+
+3) Match and transform data and paths with inline regular expressions aand functions?
+
+4) Do this with ANY JSON database that supports `get(key)` and `set(key)`!
+
+## Example
 
 Assume that customer contacts are stored distinct from their account info which is distinct from billing and shipping info which is distinct from addresses:
 
@@ -59,10 +69,10 @@ function isDataKey(key) { // keys take the form '/Classname/#<some id>'
 
 let contact = db.get("/Contact/#1");
 if(contact) {
-	contact = dot-async-data(customer,{isDataKey,idKey:"#,db}),
+	contact = dotAsyncData(customer,{isDataKey,idKey:"#,db}),
 	billingAddress = await customer.accountInfo.billingInfo.address(),
-	shippingAddress = await customer.accountInfo.shippingAddress;
-	await contact.premier(true);
+	shippingAddress = await customer.accountInfo.shippingAddress();
+	await contact.premier(true); // update to premier
 	...
 }
 ```
@@ -73,7 +83,7 @@ Dot notation paths may also include filter, transformation, and summary function
 customer.contacts[({firstName,lastName,phone}) => { return {firstName,lastName,phone} }]();
 ```
 
-will extract the listed properties from this data:
+will load the referecned objects and extract the destructured properties from this data:
 
 ```javascript
 {
@@ -82,8 +92,6 @@ will extract the listed properties from this data:
 	...
 }
 ```
-
-You can do this with ANY JSON database that supports `get(key)` and `set(key)`!
 
 ## Installing
 
@@ -97,7 +105,7 @@ npm install dot-async-data
 
 See the files `test/index.html` and `test/index.js` for basic examples while we enhance the documentation.
 
-If a dot path can't be resolved is will simpoly return `undefined`. No more errors half way down a path because of a missing entity! (We will probably add a `strict` mode
+If a dot path can't be resolved it will simpoly return `undefined`. No more errors half way down a path because of a missing entity! (We will probably add a `strict` mode
 if you want the errors).
 
 This is an ALPHA release.
@@ -107,6 +115,8 @@ This is an ALPHA release.
 Although the purpose and architecture of `dot-async` are very different, the asychronous dot notation was inspired by the fabulous [GunDB](https://gun.eco/).
 
 ## Release History (reverse chronological order)
+
+2020-09-18 v0.0.3a Ehanced docs. Further simplified internals.
 
 2020-09-18 v0.0.2a Simplified internals. Added support for inline named functions from exports and multi-faceted RegExp matched for array values or individual keys.
 
