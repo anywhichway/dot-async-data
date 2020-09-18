@@ -1,4 +1,4 @@
-# dot-async
+# dotasync
 
 Asynchronous dot notation to radically simplify JSON database access.
 
@@ -88,7 +88,7 @@ You can do this with ANY JSON database that supports `get(key)` and `set(key)`!
 ## Installing
 
 ```
-npm install dot-async
+npm install dotasync
 ```
 
 ## Using
