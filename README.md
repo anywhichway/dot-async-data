@@ -83,7 +83,7 @@ Dot notation paths may also include filter, transformation, and summary function
 customer.contacts[({firstName,lastName,phone}) => { return {firstName,lastName,phone} }]();
 ```
 
-will load the referecned objects and extract the destructured properties from this data:
+will load the referenced objects and extract the destructured properties from this data:
 
 ```javascript
 {
