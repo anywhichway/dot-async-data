@@ -1,0 +1,30 @@
+{
+	"name": "dot-async",
+	"version": "0.0.1a",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/anywhichway/dot-async.git"
+	},
+	"keywords": [
+		"dot notation",
+		"database query",
+		"key value"
+	],
+	"author": "Simon Y. Blackwell <syblackwell@anywhichway.com> (http://www.github.com/anywhichway)",
+	"bugs": {
+		"url": "https://github.com/anywhichway/dot-async/issues"
+	},
+	"homepage": "https://github.com/anywhichway/dot-async#readme",
+	"scripts": {
+		"test": "mocha ./test/index.js --require esm"
+	},
+	"dependencies": {
+		"esm": "^3.2.25"
+	},
+	"devDependencies": {
+		"benchtest": "^2.0.6",
+		"chai": "^4.2.0",
+		"mocha": "^8.1.1",
+		"node-localstorage": "^2.1.6"
+	}
+}
