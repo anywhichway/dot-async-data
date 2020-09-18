@@ -16,7 +16,7 @@ What if you could:
 
 3) Match and transform data and paths with inline regular expressions aand functions?
 
-4) Do this with ANY JSON database that supports `get(key)` and `set(key)`!
+4) Do this with ANY JSON database that supports `get(key)` and `set(key,value)`!
 
 ## Example
 
