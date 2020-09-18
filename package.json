@@ -1,6 +1,6 @@
 {
 	"name": "dotasync",
-	"version": "0.0.1a",
+	"version": "0.0.2a",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/anywhichway/dot-async.git"

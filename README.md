@@ -67,7 +67,7 @@ if(contact) {
 }
 ```
 
-Dot notation paths can also include filter, transformation, and summary functions or regular expressions, e.g.
+Dot notation paths may also include filter, transformation, and summary functions or regular expressions, e.g.
 
 ```javascript
 customer.contacts[({firstName,lastName,phone}) => { return {firstName,lastName,phone} }]();
@@ -107,5 +107,7 @@ This is an ALPHA release.
 Although the purpose and architecture of `dot-async` are very different, the asychronous dot notation was inspired by the fabulous [GunDB](https://gun.eco/).
 
 ## Release History (reverse chronological order)
+
+2020-09-18 v0.0.2a Simplified internals. Added support for inline named functions from exports and multi-faceted RegExp matched for array values or individual keys.
 
 2020-09-17 v0.0.1a First public release
