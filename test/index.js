@@ -12,11 +12,17 @@ if(typeof(window)==="undefined") {
 	expect = window.expect;
 }
 
+/*
+
+$key[$]
+
+*/
+
 function isDataKey(key) {
 	return typeof(key)==="string" && new RegExp("/.*/\#.*").test(key);
 }
 	
-const { $max, $values, $map } = dotAsyncData;
+const { $max, $values, $map, $type, $reduce, $match, $lt } = dotAsyncData;
 
 describe("dotAsyncData",async function() {
 	const cache = {},
@@ -24,23 +30,55 @@ describe("dotAsyncData",async function() {
 		joe = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}],f(value) { return value; }},
 		jane = {name: "jane"};
 	joe.wife = jane;
+	
+	await db.set("keys",{
+		private: "a private key",
+		public: "a public key"
+	});
+	
+	await db.set("parts",{
+		private: "a private part",
+		public: "a public part"
+	})
 
 	await db.put(joe,{dereference:true});
 	jane.husband = joe;
 	await db.put(jane);
-	
 	jane.children = joe.children;
 	
-	let object1, object2;
+	let object0, object1, object2;
 	it("create",() => {
+		object0 = dotAsyncData(null,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache})
 		object1 = dotAsyncData(jane,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache});
 		object2 = dotAsyncData(joe,{isDataKey,idKey:"#",db,autoSave:true,inline:true,cache});
 		expect(object1).to.be.instanceof(Object);
 		expect(object2).to.be.instanceof(Object)
 	})
+	it("key query",async () => {
+		const value = await object0.keys();
+		expect(value.private).to.equal("a private key");
+		expect(value.public).to.equal("a public key")
+	});
+	it("key query extended",async () => {
+		const value = await object0.keys.private();
+		expect(value).to.equal("a private key");
+	});
+	it("re-use query",async () => {
+		const value = await object0.parts();
+		expect(value.private).to.equal("a private part");
+		expect(value.public).to.equal("a public part");
+	});
 	it("get direct property value",async () => {
 		const value = await object1.name();
 		expect(value).to.equal("jane")
+	});
+	it("get property value with type",async () => {
+		const value = await object1.name[$type("string")]();
+		expect(value).to.equal("jane")
+	});
+	it("get property value with type - fail",async () => {
+		const value = await object1.name[$type("number")]();
+		expect(value).to.equal(undefined)
 	});
 	it("set property value",async () => {
 		const value = await object1.name("janet");
@@ -107,6 +145,11 @@ describe("dotAsyncData",async function() {
 		await object1.$flush();
 		expect(Object.keys(cache).length).to.equal(0);
 	});
+	it("$lt",async () => {
+		const value = await object1.children[$lt(10)].age();
+		expect(Array.isArray(value)).to.equal(true);
+		expect(value[0]).to.be.lessThan(10);
+	});
 	it("get avg",async () => {
 		const value = await object1.children.$avg.age();
 		expect(value).to.equal(7.5);
@@ -155,5 +198,40 @@ describe("dotAsyncData",async function() {
 		expect(Array.isArray(value)).to.equal(true);
 		expect(value.length).to.equal(2);
 		expect(value.every(item => typeof(item)==="number")).to.equal(true);
+	});
+	it("map",async () => {
+		const value = await object1.children[$map((child) => { 
+			if(child.age<21) { child.minor = true }
+			return child;
+		})]();
+		expect(Array.isArray(value)).to.equal(true);
+		expect(value.length).to.equal(3);
+		expect(value.every((child) => child.age ? child.minor : true)).to.equal(true);
+	});
+	it("map",async () => {
+		const value = await object1.children[$map((child) => { 
+			if(child.age<21) { child.minor = true }
+			return child;
+		})]();
+		expect(Array.isArray(value)).to.equal(true);
+		expect(value.length).to.equal(3);
+		expect(value.every((child) => child.age ? child.minor : true)).to.equal(true);
+	});
+	it("reduce",async () => {
+		const value = await object1.children[$reduce((accum,child) => { 
+			if(child.age) { accum.push(child) }
+			return accum;
+		},[])]();
+		expect(Array.isArray(value)).to.equal(true);
+		expect(value.length).to.equal(2);
+	});
+	it("match in array",async () => {
+		const value = await object1.children[$match({name:"janet"})]();
+		expect(Array.isArray(value)).to.equal(true);
+		expect(value.length).to.equal(1);
+	});
+	it("match in object",async () => {
+		const value = await object1[$match({name:"joan"})]();
+		expect(value.name).to.equal("joan");
 	});
 });

@@ -14,8 +14,9 @@
 	const listeners = {on:{change:[],delete:[],save:[]}};
 	function dotAsyncData(value,options,path=[]) {
 		path = path.slice();
-		const length = path.length,
+		const length = path.length, // fix length to this level of the proxy
 			f = () => {},
+			initialvalue = value;
 			proxy = new Proxy(f,{
 				get(target,property) {
 					if(property==="then") {
@@ -34,10 +35,13 @@
 						return (cb) => { handler(listeners,path.slice(),cb); return proxy; }
 					}
 					path[length] = property;
+					if(initialvalue==null && options.db && length===0) {
+						value = {[property]:options.db.get(property)};
+					}
 					return dotAsyncData(value,options,path,listeners);
 				},
 				async apply(_,thisArg,argumentsList) {
-					const ctx = typeof(thisArg)==="function" ? value : thisArg||value;
+					const ctx = typeof(thisArg)==="function" ? await value : thisArg|| await value;
 					path = path.slice(0,length);
 					return exec(ctx,path,argumentsList.length,argumentsList[0],options,ctx,listeners);
 				}
@@ -45,15 +49,49 @@
 		return proxy;
 	}
 	
+	const $match = (value,pattern) => {
+		const vtype = typeof(value),
+			ptype = typeof(pattern);
+		if(vtype!==ptype) return false;
+		if(value===pattern) return true;
+		if(value && pattern) {
+			if(pattern.length!==undefined && value.length!==pattern.length) return false;
+			if(pattern.size!==undefined && value.size!==pattern.size) return false;
+			if(vtype==="object" && ptype==="object") {
+				for(const key in pattern) {
+					if(!$match(value[key],pattern[key])) return false;
+				}
+			}
+		}
+		return true;
+	}
+	
 	const objectAccessors = {
 		$count: (values) => values.length,
+		$type: (type) => `(value) => typeof(value)==="${type}" ? value : undefined`,
+		$lt: (value) => `<${typeof(value)==="string" ? "'" + value + "'" : value}`,
+		$lte: (value) => `<=${typeof(value)==="string" ? "'" + value + "'" : value}`,
+		$gte: (value) => `>=${typeof(value)==="string" ? "'" + value + "'" : value}`,
+		$gt: (value) => `>${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$avg:  (values) => { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : accum,0)/i; },
 		$min:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value < accum ? value : accum,Infinity),
 		$max:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value > accum ? value : accum,-Infinity),
 		$sum:  (values) => values.reduce((accum,value) => typeof(value)==="number" ? value += accum : accum,0),
 		$product:  (values) => values.reduce((accum,value) => typeof(value)==="number" ? value *= accum : accum,1),
-		$values: (values) => values
+		$values: (values) => values,
+		$map: (f) => `(value) => value.map(${f+""})`,
+		$reduce: (f,accum) => accum!==undefined ? `(value) => value.reduce(${f},${JSON.stringify(accum)})` :  `(value) => value.reduce(${f})`,
+		$match: (pattern) => `(values) => {
+			if(Array.isArray(values)) {
+				return values.filter((value) => $match(value,${JSON.stringify(pattern)}))
+			}
+			return $match(values,${JSON.stringify(pattern)})
+		}`
 	}
+	
+	const inlineScope = {
+		$match
+	};
 	
 	async function exec(target,path,argCount,arg,{isDataKey,idKey,db,autoSave,inline,cache}={},previous,listeners,recursing) {
 		const cacheGet =  async (key) => cache ? cache[key]||(cache[key] =  await db.get(key)) : await db.get(key);
@@ -66,9 +104,15 @@
 				if(objectAccessors[item]) {
 					return objectAccessors[item];
 				}
+				if(item.startsWith("<")) {
+					return Function(`return (values) => Array.isArray(values) ? values.filter((value) => value ${item}) : values ${item}`)();
+				}
+				if(item.startsWith(">")) {
+					return Function(`return (values) => Array.isArray(values) ? values.filter((value) => value ${item}) : values ${item}`)();
+				}
 				if(inline) {
 					try {
-						var test = Function("return " + item)();
+						var test = Function("inlineScope","with(inlineScope) { return " + item + "}")(inlineScope);
 						if(typeof(test)==="function") {
 							return test;
 						}
@@ -109,7 +153,7 @@
 		for(let i=0;i<path.length;i++) {
 			const key = path[i],
 				fkey = typeof(key)==="function" ? key : undefined;
-			if(i<path.length-1 && !fkey && (!value || typeof(value)!=="object")) {
+			if(i<path.length-1 && !fkey && (value==null || typeof(value)!=="object")) {
 				return;
 			}
 
@@ -154,7 +198,7 @@
 			}
 			
 			if(i===path.length-1 && argCount>0) {
-				oldvalue = value[key];
+				oldvalue = await value[key];
 				if(arg===undefined) {
 					delete value[key];
 				} else {
@@ -178,33 +222,48 @@
 			}
 			
 			if(typeof(value)==="function") {
-				value = value.call(value.ctx,key);
-			} else if(fkey && typeof(value)==="object") {
-				if(Array.isArray(value)) {
-					const values = [];
-					path = path.slice(i+1);
-					for(const item of value) {
-						let result = await exec(item,path,0,undefined,{isDataKey,idKey,db,autoSave,inline,cache},value,listeners,true);
-						if(result!=undefined) {
-							values.push(result); //fkey ? await fkey(result) : result
-						}
-					}
-					value = fkey ? fkey.call(value,values) : values;
-				} else { // handle objects used to store references {idref1: value, idref2: value, ...}
-					const entries = Object.entries(value);
-					let values = [];
-					for(let [key,value] of entries) {
-						if(isDataKey && isDataKey(key)) {
-							if(!value || typeof(value)!=="object") {
-								values.push(key)
-							} else {
-								values.push(value)
+				value = await value.call(value.ctx,key);
+			} else if(fkey) {
+				if(value && typeof(value)==="object") {
+					if(Array.isArray(value)) {
+						const values = [];
+						path = path.slice(i+1);
+						for(const item of value) {
+							let result = await exec(item,path,0,undefined,{isDataKey,idKey,db,autoSave,inline,cache},value,listeners,true);
+							if(result!=undefined) {
+								values.push(result); //fkey ? await fkey(result) : result
 							}
-						} else if(fkey && await fkey.call(previous,key)) {
-							values = values.concat(previous[key])
+						}
+						value = fkey ? await fkey.call(value,values) : values;
+					} else { 
+						let tmp;
+						try {
+							tmp = await fkey(value);
+							if(tmp!==undefined) {
+								value = value; // just to be clear, if passing the value remains the same
+							}
+						} catch(e) {
+							
+						}
+						if(tmp===undefined) { // handle objects used to store references {idref1: value, idref2: value, ...}
+							const entries = Object.entries(value);
+							let values = [];
+							for(let [key,value] of entries) {
+								if(isDataKey && isDataKey(key)) {
+									if(!value || typeof(value)!=="object") {
+										values.push(key)
+									} else {
+										values.push(value)
+									}
+								} else if(fkey && await fkey.call(previous,key)) {
+									values = values.concat(previous[key])
+								}
+							}
+							value = values;
 						}
 					}
-					value = values;
+				} else {
+					value = await fkey(value);
 				}
 			} else if(Array.isArray(value)) {
 				value = value.reduce((accum,item) => {
@@ -226,7 +285,7 @@
 				}
 				value = undefined;
 			} else {
-				value = value[key]; //fkey ?  await fkey.call(dbvalue||target,value) : value[key];
+				value = await value[key]; //fkey ?  await fkey.call(dbvalue||target,value) : value[key];
 				if(value===undefined) {
 					return;
 				}
@@ -234,7 +293,7 @@
 					value.ctx = previous;
 				}
 			}
-			previous = value;
+			previous = value = await value;
 		}
 		return value;
 	}
