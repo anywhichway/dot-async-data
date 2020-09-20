@@ -183,7 +183,7 @@ You can use functions and regular expressions as part of path to filter path com
 square bracket, `[<function or regular expression]` notation. Some functions can be used directly, e.g. `part1.$<function name>.part2`.
 
 ```javascript
-dotAsyncObject[/*.Address/].city(); // cities for all data in fields ending in `address`, e.g. homeAddress, billingAddress, etc.
+dotAsyncObject[/*.Address/].city(); // cities for all data in fields ending in Address, e.g. homeAddress, billingAddress, etc.
 ```
 
 ```javascript
