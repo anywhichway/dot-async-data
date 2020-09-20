@@ -105,8 +105,8 @@ npm install dot-async-data
 
 Browser
 
-```javascript
-<script src="./path/copyOfIndex.js></script>
+```html
+<script src="./path/copyOfIndex.js"></script>
 <script>
 const {$min, $max, ... other functions you wish to use} = dotAsyncData;
 
