@@ -16,7 +16,7 @@ What if you could:
 
 3) Match and transform data and paths with inline regular expressions aand functions?
 
-4) Do this with ANY JSON database that supports `get(key)` and `set(key,value)`!
+4) Do this with ANY JSON database that supports `get(key)` and `set(key,value)` and even pass queries to a GraphQL or SQL API!
 
 ## Example
 
@@ -212,11 +212,11 @@ For the examples below, assume the following:
 {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]}
 ```
 
-$count - number values in array that are not undefined.
+$count - number of values in array that are not undefined.
 
 ```javascript
 3 === await asyncDataObject.children[$count](); // true
-3 === await asyncDataObject.children.$count); // true
+3 === await asyncDataObject.children.$count(); // true
 3 === (await object1.children()).length; // true
 2=== await asyncDataObject.children.age[$count](); // true
 2 === await asyncDataObject.children.age.$count(); // true
@@ -245,35 +245,35 @@ $avgIf(test :function,default :number=0) - inline only, average of all items in 
 
 Note: To implete `avgAllIf`, your test function should return `true` for undefined and you should not provide a default value for undefined.
 
-$max - max numeric items in an array
+$max - max of numeric items in an array
 
 ```javascript
 10 === await asyncDataObject.children[$max](); // true
 10 === await asyncDataObject.children.$max; // true
 ```
 
-$min - min numeric items in an array
+$min - min of numeric items in an array
 
 ```javascript
 5 === await asyncDataObject.children[$min](); // true
 5 === await asyncDataObject.children.$min; // true
 ```
 
-$sum - sum numeric items in an array
+$sum - sum of numeric items in an array
 
 ```javascript
 15 === await asyncDataObject.children[$sum](); // true
 15 === await asyncDataObject.children.$sum; // true
 ```
 
-$product - multiply numeric items in an array
+$product - product of numeric items in an array
 
 ```javascript
 50 === await asyncDataObject.children[$product](); // true
 50 === await asyncDataObject.children.$product; // true
 ```
 
-$values - just returns the values in the array resolved if they are database keys
+$values - returns the values in the array resolved if they are database keys
 
 ```javascript
 deepEqual(
@@ -284,6 +284,11 @@ deepEqual(
 
 $type(type :string ) - inline but usable without options flag
 
+```javascript
+"joe" === await asyncDataObject.name[$type("string")]();
+undefined  === await asyncDataObject.name[$type("number")]();
+```
+
 $lt(value :primitive)  - inline but usable without options flag
 
 $lte(value :primitive)  - inline but usable without options flag
@@ -292,7 +297,19 @@ $gte(value :primitive)  - inline but usable without options flag
 
 $gt(value :primitive)  - inline but usable without options flag
 
-$query(value :string) - inline only (for now)
+$query(formatter :function||:string) - inline only (for now)
+
+Takes the current property name, value provided by an inline function, or terminal value for the path and passes it to the `formatter` function. The string value returned by the formatter function
+will be passed to `db.query` (with `db` being the database wrapper provided when the `dotAsyncData` object was created) and results will be passed down the path.
+
+If a `string` is passed to `$query`, the string is treated as an interpolation and the varibale `$value` is available for resolution.
+
+Using this capability you can query a server using SQL, GraphQl, Mongo query language, etc. You just need to provide an adapter that passes the string to you server and returns parsed JSON.
+
+```javascript
+await asyncDataObject.name[$query("SELECT ${$value} FROM Contacts OUTPUT JSON")]();
+await asyncDataObject.name[$query((value) => `SELECT ${value} FROM Contacts OUTPUT JSON`)]();
+```
 
 $get - inline only (for now), polymorphic
 
@@ -306,9 +323,22 @@ $match(pattern :object - inline only, polymorphic
 
 ## Regular Expressions
 
+Regular expressions can be used to match either property names in the dotted path or the value at the end of the path, e.g.
 
-## Inline Functions
+```javascript
+[10,5] = await asyncDataObject[/child*./].age();
+["janet","jon"] = await asyncDataObject.children.name[/j.*/]();
+```
 
+## Custom Inline Functions
+
+Custom inline functions can be used to transform data so long as they do not contain closures, e.g.:
+
+```javascript
+[{name:"janet",minor:true},{name:"jon",minor:true},{name:"mary:,minor:undefined}] 
+	= await asyncDataObject.children[({name,age}) => ({name,minor:age==undefined ? undefined : age>=21 ? true : false})]();
+```
+Functions containing closures will usually silently fail and the path will resolve to `undefined`.
 
 # Internals
 
@@ -333,9 +363,9 @@ Although the purpose and architecture of `dot-async` are very different, the asy
 
 # Release History (reverse chronological order)
 
-2020-09-18 v0.0.6a Los od documentation. Added `$avgAll` and `$avgIf`.
+2020-09-20 v0.0.6a Lots of documentation updates. Added `$avgAll` and `$avgIf`. Fixed some issues related to inlines of $max, $min, and other functions that don't require `{inline:true}`.
 
-2020-09-18 v0.0.5a Added $get, $set, $query. Enhanced documentation. MVP scope complete. 
+2020-09-19 v0.0.5a Added $get, $set, $query. Enhanced documentation. MVP scope complete. 
 
 2020-09-18 v0.0.4a Added $type, $map, $reduce, $match, $lt, $lte, $gte, $gt and base query support.
 

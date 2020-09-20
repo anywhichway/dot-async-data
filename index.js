@@ -12,7 +12,7 @@
 	}
 	
 	const listeners = {on:{change:[],delete:[],save:[]}};
-	function dotAsyncData(value,options,path=[]) {
+	function dotAsyncData(value,options={},path=[]) {
 		path = path.slice();
 		const length = path.length, // fix length to this level of the proxy
 			f = () => {},
@@ -71,20 +71,20 @@
 	}
 	
 	const objectAccessors = {
-		$count: (values) => Array.isArray(values) ? values.filter(item => item!=undefined).length : values==undefined ? 0 : 1,
+		$count: function $count(values) { return Array.isArray(values) ? values.filter(item => item!=undefined).length : values==undefined ? 0 : 1 },
 		$type: (type) => `typeof(values)==="${type}"`,
 		$lt: (value) => `<${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$lte: (value) => `<=${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$gte: (value) => `>=${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$gt: (value) => `>${typeof(value)==="string" ? "'" + value + "'" : value}`,
-		$avg:  (values) => { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : accum,0)/i; },
-		$avgAll: (values) => { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : (i++,accum),0)/i; },
+		$avg:  function $avg(values) { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : accum,0)/i; },
+		$avgAll: function $avgAll(values) { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : (i++,accum),0)/i; },
 		$avgIf: (test,dflt=0) => `(values) => {let i=0; return values.reduce((accum,value) => (${test})(value) ? (i++,accum+=(typeof(value)==="number" ? value : ${dflt})) : accum,0)/i; }`,
-		$min:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value < accum ? value : accum,Infinity),
-		$max:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value > accum ? value : accum,-Infinity),
-		$sum:  (values) => values.reduce((accum,value) => typeof(value)==="number" ? value += accum : accum,0),
-		$product:  (values) => values.reduce((accum,value) => typeof(value)==="number" ? value *= accum : accum,1),
-		$values: (values) => values,
+		$min:  function $min(values) { return values.reduce((accum,value) => typeof(value)==="number" && value < accum ? value : accum,Infinity) },
+		$max:  function $max(values) { return values.reduce((accum,value) => typeof(value)==="number" && value > accum ? value : accum,-Infinity) },
+		$sum:  function $sum(values) { return values.reduce((accum,value) => typeof(value)==="number" ? value += accum : accum,0) },
+		$product: function $product(values) { return values.reduce((accum,value) => typeof(value)==="number" ? value *= accum : accum,1) },
+		$values: function $values(values) { return values },
 		$map: (f) => `(value) => value.map(${f+""})`,
 		$reduce: (f,accum) => accum!==undefined ? `(value) => value.reduce(${f},${JSON.stringify(accum)})` :  `(value) => value.reduce(${f})`,
 		$match: (pattern) => `(values) => {
@@ -93,7 +93,7 @@
 			}
 			return $match(values,${JSON.stringify(pattern)})
 		}`,
-		$get: async function $get(values) {
+		$get: async function $get(values,{$db}) {
 			if(Array.isArray(values)) {
 				const results = [];
 				for(const key of values) {
@@ -107,7 +107,7 @@
 				return $db.get(values);
 			}
 		},
-		$set: (value) => `async function $set(values) {
+		$set: (value) => `async (values,{$db}) => {
 			const value = ${typeof(value)==="string" || typeof(value)==="object" ? JSON.stringify(value) : value};
 			if(Array.isArray(values)) {
 				const results = [];
@@ -123,7 +123,7 @@
 				return value;
 			}
 		}`,
-		$query: (value) => `async function $query($value) { return $db.query(\`${value}\`) }`
+		$query: (value) => typeof(value)==="string" ? `async ($value,{$db}) => { return $db.query(\`${value}\`) }` :  `async (value,{$db}) => { return $db.query((${value})(value)) }`
 	}
 	
 	
@@ -140,6 +140,11 @@
 				if(typeof(item)==="function") {
 					return item;
 				}
+				for(const [key,value] of Object.entries(objectAccessors)) {
+					if(key===item || item.startsWith(`function ${key}(`) || item.startsWith(`async function ${key}(`)) {
+						return value;
+					}
+				}
 				if(objectAccessors[item]) {
 					return objectAccessors[item];
 				}
@@ -151,7 +156,7 @@
 				}
 				if(inline) {
 					try {
-						var test = Function("inlineScope","with(inlineScope) { return " + item + "}")(inlineScope);
+						var test = Function("return " + item)();
 						if(typeof(test)==="function") {
 							return test;
 						}
@@ -223,7 +228,7 @@
 				value.resolved = true;
 			}
 			
-			if(cache[key]) {
+			if(cache && cache[key]) {
 				value = cache[key];
 			}
 			if(isDataKey && db) {
@@ -272,14 +277,14 @@
 						for(const item of value) {
 							values.push(await exec(item,path,0,undefined,{isDataKey,idKey,db,autoSave,inline,cache},value,listeners,true));
 						}
-						value = fkey ? await fkey.call(value,values,{db}) : values;
+						value = fkey ? await fkey.call(value,values,inlineScope) : values;
 						if(Array.isArray(value)) {
 							value = value.filter(item => item!=undefined)
 						}
 					} else { 
 						let tmp;
 						try {
-							tmp = await fkey(value,{db});
+							tmp = await fkey(value,inlineScope);
 							if(tmp!==undefined) {
 								if(fkey.name==="$get") {
 									dbkey = value;
@@ -300,7 +305,7 @@
 									} else {
 										values.push(value)
 									}
-								} else if(fkey && await fkey.call(previous,key,{db})) {
+								} else if(fkey && await fkey.call(previous,key,inlineScope)) {
 									values = values.concat(previous[key])
 								}
 							}
@@ -308,7 +313,7 @@
 						}
 					}
 				} else {
-					value = await fkey(value);
+					value = await fkey(value,inlineScope);
 				}
 			} else if(Array.isArray(value)) {
 				value = value.reduce((accum,item) => {

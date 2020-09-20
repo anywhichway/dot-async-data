@@ -206,20 +206,13 @@ Functions that typically work only on arrays or object are not polymorphic, i.e.
 If $max is called on an array, the the maximum value in the array is returned. Polymorphic versions are planned and will be prefixed with `poly`, e.g. `$polyMax`.
 Exceptions include $count, `$map` and `$reduce` which handle array and non-array data. Non-array data will treated like single element arrays.
 
-For the examples below, assume the following:
+For the examples below, assume the following (which you can edit! ... just reload the page if you cause errors):
 
-<iframe src="https://anywhichway.github.io/dot-async-data/readme-examples/index.html" width="100%"></iframe>
+<iframe src="./readme-examples/index.html" width="100%"></iframe>
 
-$count - number values in array that are not undefined.
+$count - number of values in array that are not undefined.
 
-```javascript
-3 === await asyncDataObject.children[$count](); // true
-3 === await asyncDataObject.children.$count); // true
-3 === (await object1.children()).length; // true
-2=== await asyncDataObject.children.age[$count](); // true
-2 === await asyncDataObject.children.age.$count(); // true
-2 === (await asyncDataObject.children.age()).length; // true, undefined is ALWAYS filtered out of child data
-```
+<iframe src="./readme-examples/$count.html" width="100%"></iframe>
 
 $avg - average of numeric items in an array
 
@@ -243,35 +236,35 @@ $avgIf(test :function,default :number=0) - inline only, average of all items in 
 
 Note: To implete `avgAllIf`, your test function should return `true` for undefined and you should not provide a default value for undefined.
 
-$max - max numeric items in an array
+$max - max of numeric items in an array
 
 ```javascript
 10 === await asyncDataObject.children[$max](); // true
 10 === await asyncDataObject.children.$max; // true
 ```
 
-$min - min numeric items in an array
+$min - min of numeric items in an array
 
 ```javascript
 5 === await asyncDataObject.children[$min](); // true
 5 === await asyncDataObject.children.$min; // true
 ```
 
-$sum - sum numeric items in an array
+$sum - sum of numeric items in an array
 
 ```javascript
 15 === await asyncDataObject.children[$sum](); // true
 15 === await asyncDataObject.children.$sum; // true
 ```
 
-$product - multiply numeric items in an array
+$product - product of numeric items in an array
 
 ```javascript
 50 === await asyncDataObject.children[$product](); // true
 50 === await asyncDataObject.children.$product; // true
 ```
 
-$values - just returns the values in the array resolved if they are database keys
+$values - just returns the values in the array which are resolved if they are database keys
 
 ```javascript
 deepEqual(

@@ -84,8 +84,12 @@ describe("dotAsyncData",async function() {
 		const value = await object1.secret[$get]();
 		expect(value).to.equal("new secrect");
 	});
-	it("inline query",async () => {
+	it("inline query as string",async () => {
 		const value = await object1.name[$query("SELECT ${$value} FROM Contacts OUTPUT JSON")]();
+		expect(value).to.equal("SELECT jane FROM Contacts OUTPUT JSON");
+	});
+	it("inline query as function",async () => {
+		const value = await object1.name[$query((value) => `SELECT ${value} FROM Contacts OUTPUT JSON`)]();
 		expect(value).to.equal("SELECT jane FROM Contacts OUTPUT JSON");
 	});
 	it("get direct property value",async () => {
