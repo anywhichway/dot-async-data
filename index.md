@@ -208,9 +208,7 @@ Exceptions include $count, `$map` and `$reduce` which handle array and non-array
 
 For the examples below, assume the following:
 
-```javascript
-{name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]}
-```
+<iframe src="https://anywhichway.github.io/dot-async-data/readme-examples/index.html" width="100%"></iframe>
 
 $count - number values in array that are not undefined.
 
