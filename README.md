@@ -126,7 +126,7 @@ const {$min, $max, ... other functions you wish to use} = require("dotAsyncData"
 ```
 
 To maintain isomorphism and keep our own build process simple, the use of JavaScript modules using `import/export` is not yet supported. The [esm](https://www.npmjs.com/package/esm) module is
-a dependency for NoeJS and if you wish to mix and match start your application with the command `node -r esm <your file>`.
+a dependency for the NodeJS version. If you wish to mix and match, start your application with the command `node -r esm <your file>`.
 
 See the files `test/index.html` and `test/index.js` for basic examples while we enhance the documentation.
 
