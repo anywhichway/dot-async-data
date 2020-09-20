@@ -164,9 +164,9 @@ The options surface is:
 ```javascript
 {
 	isDataKey:function, // return true if the passed in value is a database object key, e.g. a UUID
-	idKey: string, // the property in JSON objects where the unique id is store, e.g. _id
+	idKey: string, // the property in JSON objects where the unique id is store, e.g. _id. Value not have to return true for `isDataKey`
 	db: object, // the database or database wrapper supporting `get(key)` and `set(key,value)`, the wrapper must convert to and from JSON
-	autoSave: boolean, // automatically save objects when their properties are updated
+	autoSave: boolean, // automatically save objects when their properties or values are updated
 	inline: boolean, // allow inline functions
 	cache
 }
@@ -176,12 +176,12 @@ The options surface is:
 
 Once you have a `dotAsyncData` object, you can access it to any depth using standard dot notation, just put an `await` at the start and finish it with `()`.
 
-If a dot path can't be resolved it will simpoly return `undefined`. No more errors half way down a path because of a missing entity! (We will probably add a `strict` mode
+If a dot path can't be resolved it will simply return `undefined`. No more errors half way down a path because of a missing entity! (We will probably add a `strict` mode
 if you want the errors).
 
 ### Built-in Functions
 
-Some must be inline, others can be referenced via dot notation, e.g. `value[$max]` and `value.$max`. If a function must be inline, then to use it the `dotAsyncData` object must have been
+Some must be inline. Many can be referenced inline and via dot notation, e.g. `value[$max]` and `value.$max`. Unless otherwise noted, if a function is flagged as inline, then to use it the `dotAsyncData` object must have been
 created with `{inline:true}`.
 
 Unless otherwise noted, functions that would typically work only on arrays or object are not polymorphic, i.e. if $max is called on a single numeric value, then `undefined` is returned. 
@@ -189,15 +189,15 @@ If $max is called on an array, the the maximum value in the array is returned. P
 
 $count
 
-$type(type :string ) - inline only (for now)
+$type(type :string ) - inline but usable without options flag
 
-$lt(value :number)
+$lt(value :primitive)  - inline but usable without options flag
 
-$lte(value :number)
+$lte(value :primitive)  - inline but usable without options flag
 
-$gte(value :number)
+$gte(value :primitive)  - inline but usable without options flag
 
-$gt(value :number)
+$gt(value :primitive)  - inline but usable without options flag
 
 $avg
 
@@ -210,6 +210,12 @@ $sum
 $product
 
 $values
+
+$query(value :string) - inline only (for now)
+
+$get - inline only (for now), polymorphic
+
+$set(value :any) - inline only (for now), polymorphic
 
 $map(mapper :function) - inline only, polymorphic
 
@@ -245,6 +251,8 @@ As a result on both of the above, inline functions and regular expressions must 
 Although the purpose and architecture of `dot-async` are very different, the asychronous dot notation was inspired by the fabulous [GunDB](https://gun.eco/).
 
 ## Release History (reverse chronological order)
+
+2020-09-18 v0.0.5a Added $get, $set, $query. Enhanced documentation. MVP scope complete. 
 
 2020-09-18 v0.0.4a Added $type, $map, $reduce, $match, $lt, $lte, $gte, $gt and base query support.
 

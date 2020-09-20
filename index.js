@@ -35,8 +35,12 @@
 						return (cb) => { handler(listeners,path.slice(),cb); return proxy; }
 					}
 					path[length] = property;
-					if(initialvalue==null && options.db && length===0) {
-						value = {[property]:options.db.get(property)};
+					const {idKey,db,cache={}} = options;
+					if(initialvalue==null && db && length===0) {
+						value = {[property]:db.get(property)};
+					}
+					if(cache[value[idKey]]) { // mat have been updated by a different Proxy
+						value = cache[value[idKey]];
 					}
 					return dotAsyncData(value,options,path,listeners);
 				},
@@ -59,16 +63,16 @@
 			if(pattern.size!==undefined && value.size!==pattern.size) return false;
 			if(vtype==="object" && ptype==="object") {
 				for(const key in pattern) {
-					if(!$match(value[key],pattern[key])) return false;
+					if(!$match(value[key],pattern[key])) return undefined;
 				}
 			}
 		}
-		return true;
+		return value;
 	}
 	
 	const objectAccessors = {
 		$count: (values) => values.length,
-		$type: (type) => `(value) => typeof(value)==="${type}" ? value : undefined`,
+		$type: (type) => `typeof(values)==="${type}"`,
 		$lt: (value) => `<${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$lte: (value) => `<=${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$gte: (value) => `>=${typeof(value)==="string" ? "'" + value + "'" : value}`,
@@ -86,15 +90,47 @@
 				return values.filter((value) => $match(value,${JSON.stringify(pattern)}))
 			}
 			return $match(values,${JSON.stringify(pattern)})
-		}`
+		}`,
+		$get: async function $get(values) {
+			if(Array.isArray(values)) {
+				const results = [];
+				for(const key of values) {
+					const result = await $db.get(key);
+					if(result!=null) {
+						results.push(result);
+					}
+				}
+				return results;
+			} else {
+				return $db.get(values);
+			}
+		},
+		$set: (value) => `async function $set(values) {
+			const value = ${typeof(value)==="string" || typeof(value)==="object" ? JSON.stringify(value) : value};
+			if(Array.isArray(values)) {
+				const results = [];
+				for(const key of values) {
+					await $db.set(key,value);
+					if(result!=null) {
+						results.push(value);
+					}
+				}
+				return results;
+			} else {
+				await $db.set(values,value);
+				return value;
+			}
+		}`,
+		$query: (value) => `async function $query($value) { return $db.query(\`${value}\`) }`
 	}
 	
-	const inlineScope = {
-		$match
-	};
-	
 	async function exec(target,path,argCount,arg,{isDataKey,idKey,db,autoSave,inline,cache}={},previous,listeners,recursing) {
-		const cacheGet =  async (key) => cache ? cache[key]||(cache[key] =  await db.get(key)) : await db.get(key);
+		const cacheGet =  async (key) => cache ? cache[key]||(cache[key] =  await db.get(key)) : await db.get(key),
+			inlineScope = {
+				$match,
+				$db:db
+			};
+	
 		path = Array.isArray(path) ? path : path.split(".");
 		if(recursing===undefined) {
 			path = path.map((item) => {
@@ -104,11 +140,11 @@
 				if(objectAccessors[item]) {
 					return objectAccessors[item];
 				}
-				if(item.startsWith("<")) {
+				if(item.startsWith("<") || item.startsWith(">")) {
 					return Function(`return (values) => Array.isArray(values) ? values.filter((value) => value ${item}) : values ${item}`)();
 				}
-				if(item.startsWith(">")) {
-					return Function(`return (values) => Array.isArray(values) ? values.filter((value) => value ${item}) : values ${item}`)();
+				if(item.startsWith("typeof(values)===")) {
+					return Function(`return (values) => Array.isArray(values) ? values.filter((value) => ${item}) : ${item} ? values : undefined`)();
 				}
 				if(inline) {
 					try {
@@ -153,7 +189,7 @@
 		for(let i=0;i<path.length;i++) {
 			const key = path[i],
 				fkey = typeof(key)==="function" ? key : undefined;
-			if(i<path.length-1 && !fkey && (value==null || typeof(value)!=="object")) {
+			if(i<path.length-1 && !fkey && value==null) {
 				return;
 			}
 
@@ -198,25 +234,27 @@
 			}
 			
 			if(i===path.length-1 && argCount>0) {
-				oldvalue = await value[key];
-				if(arg===undefined) {
-					delete value[key];
-				} else {
-					value[key] = arg;
-				}
-				let saved;
-				if(dbvalue && autoSave) {
-					await db.set(dbkey,dbvalue);
-					saved = true;
-				}
-				const newvalue = arg,
-					object = value;
-				setTimeout(() => {
-					listeners.on.change.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item === path[i]) && cb({type:"change",newvalue,oldvalue,key,object,path:match}))
-					if(saved) {
-						listeners.on.save.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item === path[i]) && cb({type:"save",key:dbkey,value:dbvalue,path:match}))
+				if(typeof(value)==="object") {
+					oldvalue = await value[key];
+					if(arg===undefined) {
+						delete value[key];
+					} else {
+						value[key] = arg;
 					}
-				});
+					let saved;
+					if(dbvalue && autoSave) {
+						await db.set(dbkey,dbvalue);
+						saved = true;
+					}
+					const newvalue = arg,
+					object = value;
+					setTimeout(() => {
+						listeners.on.change.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item === path[i]) && cb({type:"change",newvalue,oldvalue,key,object,path:match}))
+						if(saved) {
+							listeners.on.save.forEach(([match,cb]) => path.length==match.length && match.every((item,i) => item === path[i]) && cb({type:"save",key:dbkey,value:dbvalue,path:match}))
+						}
+					});
+				}
 				value = arg;
 				break;
 			}
@@ -234,13 +272,17 @@
 								values.push(result); //fkey ? await fkey(result) : result
 							}
 						}
-						value = fkey ? await fkey.call(value,values) : values;
+						value = fkey ? await fkey.call(value,values,{db}) : values;
 					} else { 
 						let tmp;
 						try {
-							tmp = await fkey(value);
+							tmp = await fkey(value,{db});
 							if(tmp!==undefined) {
-								value = value; // just to be clear, if passing the value remains the same
+								if(fkey.name==="$get") {
+									dbkey = value;
+									dbvalue = tmp;
+								}
+								value = tmp;
 							}
 						} catch(e) {
 							
@@ -255,7 +297,7 @@
 									} else {
 										values.push(value)
 									}
-								} else if(fkey && await fkey.call(previous,key)) {
+								} else if(fkey && await fkey.call(previous,key,{db})) {
 									values = values.concat(previous[key])
 								}
 							}
