@@ -71,13 +71,15 @@
 	}
 	
 	const objectAccessors = {
-		$count: (values) => values.length,
+		$count: (values) => Array.isArray(values) ? values.filter(item => item!=undefined).length : values==undefined ? 0 : 1,
 		$type: (type) => `typeof(values)==="${type}"`,
 		$lt: (value) => `<${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$lte: (value) => `<=${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$gte: (value) => `>=${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$gt: (value) => `>${typeof(value)==="string" ? "'" + value + "'" : value}`,
 		$avg:  (values) => { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : accum,0)/i; },
+		$avgAll: (values) => { let i=0; return values.reduce((accum,value) => typeof(value)==="number" ? (i++,accum+=value) : (i++,accum),0)/i; },
+		$avgIf: (test,dflt=0) => `(values) => {let i=0; return values.reduce((accum,value) => (${test})(value) ? (i++,accum+=(typeof(value)==="number" ? value : ${dflt})) : accum,0)/i; }`,
 		$min:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value < accum ? value : accum,Infinity),
 		$max:  (values) => values.reduce((accum,value) => typeof(value)==="number" && value > accum ? value : accum,-Infinity),
 		$sum:  (values) => values.reduce((accum,value) => typeof(value)==="number" ? value += accum : accum,0),
@@ -123,6 +125,7 @@
 		}`,
 		$query: (value) => `async function $query($value) { return $db.query(\`${value}\`) }`
 	}
+	
 	
 	async function exec(target,path,argCount,arg,{isDataKey,idKey,db,autoSave,inline,cache}={},previous,listeners,recursing) {
 		const cacheGet =  async (key) => cache ? cache[key]||(cache[key] =  await db.get(key)) : await db.get(key),
@@ -267,12 +270,12 @@
 						const values = [];
 						path = path.slice(i+1);
 						for(const item of value) {
-							let result = await exec(item,path,0,undefined,{isDataKey,idKey,db,autoSave,inline,cache},value,listeners,true);
-							if(result!=undefined) {
-								values.push(result); //fkey ? await fkey(result) : result
-							}
+							values.push(await exec(item,path,0,undefined,{isDataKey,idKey,db,autoSave,inline,cache},value,listeners,true));
 						}
 						value = fkey ? await fkey.call(value,values,{db}) : values;
+						if(Array.isArray(value)) {
+							value = value.filter(item => item!=undefined)
+						}
 					} else { 
 						let tmp;
 						try {

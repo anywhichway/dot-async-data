@@ -1,0 +1,9 @@
+<html>
+<body>
+<textarea id="data" onchange="localStorage.setItem('data',event.target.value)"></textarea>
+<script>
+const data = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]};
+document.getElementById("data").value = JSON.stringify(data);
+</script>
+</body>
+</html>

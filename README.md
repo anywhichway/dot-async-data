@@ -93,13 +93,13 @@ will load the referenced objects and extract the destructured properties from th
 }
 ```
 
-## Installing
+# Installing
 
 ```
 npm install dot-async-data
 ```
 
-## Using
+# Using
 
 `dot-async-data` is isomorphic, the `index.js` file can be loaded in a browser or required by NodeJS code.
 
@@ -132,7 +132,7 @@ See the files `test/index.html` and `test/index.js` for basic examples while we 
 
 This is an ALPHA release.
 
-### Creating An Async Data Object
+## Creating An Async Data Object
 
 You can make any existing object into an asynchronously accessable object by calling `dotAsyncData`:
 
@@ -159,6 +159,9 @@ const mydb = ... some data store instance,
 	...
 ```
 
+Finally, you can pass `{}` as the first argument and populate the object using any serializable query supported by your database, e.g. `GraphQL`. See the `$query` built-in function for more details.
+
+
 The options surface is:
 
 ```javascript
@@ -172,22 +175,111 @@ The options surface is:
 }
 ```
 
-### Path Access
+## Path Access
 
 Once you have a `dotAsyncData` object, you can access it to any depth using standard dot notation, just put an `await` at the start and finish it with `()`.
+
+You can use functions and regular expressions as part of path to filter path components and filter or transform data. These operayions can all be expressed using
+square bracket, `[<function or regular expression]` notation. Some functions can be used directly, e.g. `part1.$<function name>.part2`.
+
+```javascript
+dotAsyncObject[/*.Address/].city(); // return the cities for all data in fields that end in `address`, e.g. homeAddress, billingAddress, shippingAddress
+```
+
+```javascript
+dotAsyncObject.children.$avg.age(); // return the average age of the children
+dotAsyncObject.children[$avg].age(); 
+
+```
+
+
+See [built-in functions](#built-in-functions) below for additional concrete examples.
 
 If a dot path can't be resolved it will simply return `undefined`. No more errors half way down a path because of a missing entity! (We will probably add a `strict` mode
 if you want the errors).
 
-### Built-in Functions
+## Built-in Functions
 
-Some must be inline. Many can be referenced inline and via dot notation, e.g. `value[$max]` and `value.$max`. Unless otherwise noted, if a function is flagged as inline, then to use it the `dotAsyncData` object must have been
-created with `{inline:true}`.
+Unless otherwise notes, built-in functions can be access via inline square brackets or dot notation, e.g. `value[$max]` and `value.$max`. With some noted exceptions, if a function is flagged as inline, 
+then to use it the `dotAsyncData` object must have been created with `{inline:true}`.
 
-Unless otherwise noted, functions that would typically work only on arrays or object are not polymorphic, i.e. if $max is called on a single numeric value, then `undefined` is returned. 
+Functions that typically work only on arrays or object are not polymorphic, i.e. if $max is called on a single numeric value, then `undefined` is returned. 
 If $max is called on an array, the the maximum value in the array is returned. Polymorphic versions are planned and will be prefixed with `poly`, e.g. `$polyMax`.
+Exceptions include $count, `$map` and `$reduce` which handle array and non-array data. Non-array data will treated like single element arrays.
 
-$count
+For the examples below, assume the following:
+
+<iframe src="https://anywhichway.github.io/dot-async-data/readme-examples/index.html"></iframe>
+
+$count - number values in array that are not undefined.
+
+```javascript
+3 === await asyncDataObject.children[$count](); // true
+3 === await asyncDataObject.children.$count); // true
+3 === (await object1.children()).length; // true
+2=== await asyncDataObject.children.age[$count](); // true
+2 === await asyncDataObject.children.age.$count(); // true
+2 === (await asyncDataObject.children.age()).length; // true, undefined is ALWAYS filtered out of child data
+```
+
+$avg - average of numeric items in an array
+
+```javascript
+7.5 === await asyncDataObject.children[$avg](); // true
+7.5 === await asyncDataObject.children.$avg; // true
+```
+
+$avgAll - average of all items in an array, non-numerics treated as 0
+
+```javascript
+5 === await asyncDataObject.children[$avgAll](); // true
+5 === await asyncDataObject.children.$avgAll(); // true
+```
+
+$avgIf(test :function,default :number=0) - inline only, average of all items in an array passing `test(value)`
+
+```javascript
+10 === await asyncDataObject.children[$avgIf(value => value>5)](); // true
+```
+
+Note: To implete `avgAllIf`, your test function should return `true` for undefined and you should not provide a default value for undefined.
+
+$max - max numeric items in an array
+
+```javascript
+10 === await asyncDataObject.children[$max](); // true
+10 === await asyncDataObject.children.$max; // true
+```
+
+$min - min numeric items in an array
+
+```javascript
+5 === await asyncDataObject.children[$min](); // true
+5 === await asyncDataObject.children.$min; // true
+```
+
+$sum - sum numeric items in an array
+
+```javascript
+15 === await asyncDataObject.children[$sum](); // true
+15 === await asyncDataObject.children.$sum; // true
+```
+
+$product - multiply numeric items in an array
+
+```javascript
+50 === await asyncDataObject.children[$product](); // true
+50 === await asyncDataObject.children.$product; // true
+```
+
+$values - just returns the values in the array resolved if they are database keys
+
+```javascript
+deepEqual(
+	await asyncDataObject.children.$values(),
+	await dotAsyncData({children:["/Object/#child1","/Object/#child2","/Object/#child3"]}).children.$values()
+	) = true // assuming the keys resolve to children with the same names and ages as the assumed data
+```
 
 $type(type :string ) - inline but usable without options flag
 
@@ -198,18 +290,6 @@ $lte(value :primitive)  - inline but usable without options flag
 $gte(value :primitive)  - inline but usable without options flag
 
 $gt(value :primitive)  - inline but usable without options flag
-
-$avg
-
-$min
-
-$max
-
-$sum
-
-$product
-
-$values
 
 $query(value :string) - inline only (for now)
 
@@ -223,13 +303,13 @@ $reduce(reducer :function[,accumulator]) - inline only, polymorphic
 
 $match(pattern :object - inline only, polymorphic
 
-### Regular Expressions
+## Regular Expressions
 
 
-### Inline Functions
+## Inline Functions
 
 
-## Internals
+# Internals
 
 `dotAsyncData` objects are Proxies around Functions that maintain a closure around property access requests and the values to which they resolve.
 
@@ -237,7 +317,7 @@ The functions and regular expressions used within access paths take advantage of
 the JavaScript engine checks the syntax when `[]` is initially processed, the string version of the functions and regular expressions that form property names are known to be reversable into 
 actual functions and regular expressions, unless a function contains a closure.
 
-## Security
+# Security
 
 Using inline functions and regular expressions in the browser brings along some security issues related to code injection. It is recommeded you not implement
 a form based mechanism for defining queries unless you fully understand the issues related to code injection.
@@ -246,11 +326,13 @@ a form based mechanism for defining queries unless you fully understand the issu
 
 As a result on both of the above, inline functions and regular expressions must be explicitly turned on when creating a `dotAsyncData` object by using `{inline:true}`.
 
-## Acknowledgements
+# Acknowledgements
 
 Although the purpose and architecture of `dot-async` are very different, the asychronous dot notation was inspired by the fabulous [GunDB](https://gun.eco/).
 
-## Release History (reverse chronological order)
+# Release History (reverse chronological order)
+
+2020-09-18 v0.0.6a Los od documentation. Added `$avgAll` and `$avgIf`.
 
 2020-09-18 v0.0.5a Added $get, $set, $query. Enhanced documentation. MVP scope complete. 
 

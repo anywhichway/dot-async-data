@@ -22,7 +22,7 @@ function isDataKey(key) {
 	return typeof(key)==="string" && new RegExp("/.*/\#.*").test(key);
 }
 	
-const { $max, $values, $map, $type, $reduce, $match, $lt, $lte, $gte, $gt, $get, $set, $query } = dotAsyncData;
+const { $max, $values, $map, $type, $reduce, $match, $lt, $lte, $gte, $gt, $get, $set, $query, $avgIf } = dotAsyncData;
 
 describe("dotAsyncData",async function() {
 	const cache = {},
@@ -194,6 +194,14 @@ describe("dotAsyncData",async function() {
 		const value = await object1.children.$avg.age();
 		expect(value).to.equal(7.5);
 	});
+	it("get avgAll",async () => {
+		const value = await object1.children.$avgAll.age();
+		expect(value).to.equal(5);
+	});
+	it("get avgIf",async () => {
+		const value = await object1.children[$avgIf(value => value>5||value===undefined,0)].age();
+		expect(value).to.equal(5);
+	});
 	it("get min",async () => {
 		const value = await object1.children.$min.age();
 		expect(value).to.equal(5);
@@ -206,9 +214,15 @@ describe("dotAsyncData",async function() {
 		const value = await object1.children[$max].age();
 		expect(value).to.equal(10);
 	});
-	it("get count",async () => {
+	it("get array count",async () => {
+		const value = await object1.children.$count();
+		expect(value).to.equal(3);
+		expect((await object1.children()).length).to.equal(3);
+	});
+	it("get array value count",async () => {
 		const value = await object1.children.$count.age();
 		expect(value).to.equal(2);
+		expect( (await object1.children.age()).length).to.equal(2);
 	});
 	it("get product",async () => {
 		const value = await object1.children.$product.age();
