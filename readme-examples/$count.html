@@ -1,0 +1,28 @@
+<html>
+<script src="../index.js"></script>
+<body>
+<textarea id="data"></textarea>
+<script>
+const data = JSON.parse(localStorage.getItem("data")),
+	{$count} = dotAsyncData,
+	code = [
+		`await asyncDataObject.children[$count]()`,
+		`await asyncDataObject.children.$count()`,
+		`(await asyncDataObject.children()).length`,
+		`await asyncDataObject.children.age[$count]()`,
+		`await asyncDataObject.children.age.$count()`,
+		`(await asyncDataObject.children.age()).length`
+	],
+	asyncDataObject = dotAsyncData(data,{inline:true});
+Promise.all((() => {
+	const results = [];
+	for(const c of code) {
+		results.push(eval(`(async () => ${c})()`))
+	}
+	return results;
+})()).then(results => {
+	document.body.innerHTML = `<pre>${results.reduce((accum,result,i) => accum += `${result} === ${code[i]};\n`,"")}</pre>`
+})
+</script>
+</body>
+</html>

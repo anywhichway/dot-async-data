@@ -53,21 +53,40 @@
 		return proxy;
 	}
 	
-	const $match = (value,pattern) => {
-		const vtype = typeof(value),
-			ptype = typeof(pattern);
-		if(vtype!==ptype) return false;
-		if(value===pattern) return true;
-		if(value && pattern) {
-			if(pattern.length!==undefined && value.length!==pattern.length) return false;
-			if(pattern.size!==undefined && value.size!==pattern.size) return false;
-			if(vtype==="object" && ptype==="object") {
-				for(const key in pattern) {
-					if(!$match(value[key],pattern[key])) return undefined;
-				}
+	const joqular = {
+		$lt: (value,test) => value < test,
+		$lte: (value,test) => value <= test,
+		$eq: (value,test) => value == test,
+		$eeq: (value,test) => value === test,
+		$neq: (value,test) => value != test,
+		$gte: (value,test) => value >= test,
+		$gt: (value,test) => value > test,
+		$type: (value,type) => typeof(value)===type,
+		$match: (value,pattern) => {
+			const vtype = typeof(value);
+			let	ptype = typeof(pattern);
+			if(ptype==="function") {
+				pattern = pattern(value);
+				ptype = typeof(pattern);
 			}
+			if(value===pattern) return true;
+			if(ptype==="object") {
+				for(const key in pattern) {
+					if(joqular[key]) {
+						if(!joqular[key](value,pattern[key])) return undefined;
+					}
+				}
+				if(value!=null) {
+					if(pattern.length!==undefined && value.length!==pattern.length) return undefined;
+					if(pattern.size!==undefined && value.size!==pattern.size) return undefined;
+				}
+				for(const key in pattern) {
+					if(!joqular[key] && !joqular.$match(value[key],pattern[key])) return undefined;
+				}
+				return value;
+			}
+			return undefined;
 		}
-		return value;
 	}
 	
 	const objectAccessors = {
@@ -130,7 +149,7 @@
 	async function exec(target,path,argCount,arg,{isDataKey,idKey,db,autoSave,inline,cache}={},previous,listeners,recursing) {
 		const cacheGet =  async (key) => cache ? cache[key]||(cache[key] =  await db.get(key)) : await db.get(key),
 			inlineScope = {
-				$match,
+				$match:joqular.$match,
 				$db:db
 			};
 	
@@ -156,7 +175,7 @@
 				}
 				if(inline) {
 					try {
-						var test = Function("return " + item)();
+						var test = Function("$inlineScope","with($inlineScope) { return " + item + "}")(inlineScope);
 						if(typeof(test)==="function") {
 							return test;
 						}

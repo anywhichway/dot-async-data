@@ -199,12 +199,12 @@ if you want the errors).
 
 ## Built-in Functions
 
-Unless otherwise notes, built-in functions can be access via inline square brackets or dot notation, e.g. `value[$max]` and `value.$max`. With some noted exceptions, if a function is flagged as inline, 
-then to use it the `dotAsyncData` object must have been created with `{inline:true}`.
+Unless otherwise noted, built-in functions can be access via inline square brackets or dot notation, e.g. `value[$max]` and `value.$max`. With some noted exceptions, 
+if a function is flagged as inline, then to use it the `dotAsyncData` object must have been created with `{inline:true}`.
 
-Functions that typically work only on arrays or object are not polymorphic, i.e. if $max is called on a single numeric value, then `undefined` is returned. 
-If $max is called on an array, the the maximum value in the array is returned. Polymorphic versions are planned and will be prefixed with `poly`, e.g. `$polyMax`.
-Exceptions include $count, `$map` and `$reduce` which handle array and non-array data. Non-array data will treated like single element arrays.
+Functions that typically work only on arrays or object are usually not polymorphic, i.e. if $max is called on a single numeric value, then `undefined` is returned. 
+If $max is called on an array, the maximum value in the array is returned. Polymorphic versions are planned and will be prefixed with `poly`, e.g. `$polyMax`.
+Exceptions include `$count`, `$map` and `$reduce` which handle array and non-array data. Non-array data is treated like single element arrays.
 
 For the examples below, assume the following:
 
@@ -289,13 +289,36 @@ $type(type :string ) - inline but usable without options flag
 undefined  === await asyncDataObject.name[$type("number")]();
 ```
 
-$lt(value :primitive)  - inline but usable without options flag
+$lt(value :primitive)  - inline but usable without options `{inline:true}`
 
-$lte(value :primitive)  - inline but usable without options flag
+```javascript
+[5] === await asyncDataObject.children.age[$lt(10)](); // true
+```
 
-$gte(value :primitive)  - inline but usable without options flag
+$lte(value :primitive)  - inline but usable without options `{inline:true}`
 
-$gt(value :primitive)  - inline but usable without options flag
+```javascript
+[5] === await asyncDataObject.children.age[$lte(5)](); // true
+```
+
+$gte(value :primitive)  - inline but usable without options `{inline:true}`
+
+```javascript
+[10] === await asyncDataObject.children.age[$gte(10)](); // true
+```
+
+$gt(value :primitive)  - inline but usable without options `{inline:true}`
+
+```javascript
+[10] === await asyncDataObject.children.age[$gt(9)](); // true
+```
+
+$match(pattern :any) - polymorphic, matches any value, including objects with multiple properties holding literals or `$lt`, `$lte`, `$eq`, `$eeq`, `$neq`, `$gte`, `$gte`, `$type`
+
+```javascript
+await  asyncDataObject.children[$match({age:{$lte: 5},name:"janet"})]() // returns an array of children that have age<=5 and name="janet
+
+```
 
 $query(formatter :function||:string) - inline only (for now)
 
@@ -311,15 +334,13 @@ await asyncDataObject.name[$query("SELECT ${$value} FROM Contacts OUTPUT JSON")]
 await asyncDataObject.name[$query((value) => `SELECT ${value} FROM Contacts OUTPUT JSON`)]();
 ```
 
-$get - inline only (for now), polymorphic
+$get - inline only (for now), polymorphic, returns the results of a database query using the value at the current property in the path
 
-$set(value :any) - inline only (for now), polymorphic
+$set(value :any) - inline only (for now), polymorphic, sets the value of the current property
 
 $map(mapper :function) - inline only, polymorphic
 
 $reduce(reducer :function[,accumulator]) - inline only, polymorphic
-
-$match(pattern :object - inline only, polymorphic
 
 ## Regular Expressions
 
@@ -362,6 +383,8 @@ As a result on both of the above, inline functions and regular expressions must 
 Although the purpose and architecture of `dot-async` are very different, the asychronous dot notation was inspired by the fabulous [GunDB](https://gun.eco/).
 
 # Release History (reverse chronological order)
+
+2020-09-21 v0.0.7a Documentation updates. $match completion.
 
 2020-09-20 v0.0.6a Lots of documentation updates. Added `$avgAll` and `$avgIf`. Fixed some issues related to inlines of $max, $min, and other functions that don't require `{inline:true}`.
 

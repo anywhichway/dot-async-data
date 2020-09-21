@@ -292,4 +292,8 @@ describe("dotAsyncData",async function() {
 		const value = await object1[$match({name:"joan"})]();
 		expect(value.name).to.equal("joan");
 	});
+	it("match in object - $eq",async () => {
+		const value = await object1[$match({name:{$eq:"joan"}})]();
+		expect(value.name).to.equal("joan");
+	});
 });
