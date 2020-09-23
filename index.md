@@ -139,15 +139,13 @@ You can make any object into an asynchronously accessable object by calling `dot
 <downrunner id="create" console="createConsole" scripts="./index.js"></downrunner>
 ```javascript
 (() => {
-debugger;
 	const jane = {
 			"#": "/Person/#abcxyz",
 			name: "jane",
 			age: 25
 		},
 		asyncJane = dotAsyncData(jane,options);
-	console.log(await asyncJane.age());
-	console.log(await asyncJane.age(26));
+
 })();
 ```
 
