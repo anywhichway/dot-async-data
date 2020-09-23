@@ -136,16 +136,18 @@ This is an ALPHA release.
 
 You can make any object into an asynchronously accessable object by calling `dotAsyncData`:
 
-<downrunner id="create" console="creatConsole"></downrunner>
+<downrunner id="create" console="createConsole"></downrunner>
 ```javascript
-const jane = {
-		"#": "/Person/#abcxyz",
-		name: "jane",
-		age: 25
-	},
-	asyncJane = dotAsyncData(jane,options);
-console.log(await asyncJane.age());
-console.log(await asyncJane.age(26));
+(() => {
+	const jane = {
+			"#": "/Person/#abcxyz",
+			name: "jane",
+			age: 25
+		},
+		asyncJane = dotAsyncData(jane,options);
+	console.log(await asyncJane.age());
+	console.log(await asyncJane.age(26));
+})();
 ```
 
 
