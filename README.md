@@ -18,6 +18,9 @@ What if you could:
 
 4) Do this with ANY JSON database that supports `get(key)` and `set(key,value)` and even pass queries to a GraphQL or SQL API!
 
+If you <a href="https://anywhichway.github.io/dot-async-data#creating-an-async-data-object">visit this README on our GitHub pages site</a>, 
+you will be able to see the output of most sample code and be able edit sample data and change the behavior of some of the examples. 
+
 ## Example
 
 Assume that customer contacts are stored distinct from their account info which is distinct from billing and shipping info which is distinct from addresses:
@@ -214,7 +217,7 @@ For the examples below, assume the following:
 var data = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary",age:null}]};
 ```
 
-If you <a href="https://anywhichway.github.io/dot-asyn-data#built-in-functions">visit this README on out GitHub pages site</a>, 
+If you <a href="https://anywhichway.github.io/dot-async-data#built-in-functions">visit this README on our GitHub pages site</a>, 
 you will be able to edit the sample data and change the behavior of the examples. For example, try changing the age of mary form `null` to `8`.
 
 $count - number of values in array that are not undefined.
