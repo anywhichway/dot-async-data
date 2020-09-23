@@ -144,8 +144,9 @@ You can make any object into an asynchronously accessable object by calling `dot
 			name: "jane",
 			age: 25
 		},
-		asyncJane = dotAsyncData(jane,options);
-
+		asyncJane = dotAsyncData(jane);
+	console.log(await asyncJane.age());
+	console.log(await asyncJane.age(26));
 })();
 ```
 
