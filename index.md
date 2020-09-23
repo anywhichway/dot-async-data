@@ -421,6 +421,7 @@ const logger = `<script>if(window.frameElement.stdio) { while(window.frameElemen
 	});${"</"}script>`;
 
 function renderRunner(runner,scripts,runners,recursing) {
+debugger;
 	const id = runner.id,
 		editorid = runner.getAttribute("editor"),
 		targetid = runner.getAttribute("target"),
