@@ -134,7 +134,7 @@ This is an ALPHA release.
 
 ## Creating An Async Data Object
 
-You can make any existing object into an asynchronously accessable object by calling `dotAsyncData`:
+You can make any object into an asynchronously accessable object by calling `dotAsyncData`:
 
 ```javascript
 const jane = {
@@ -147,8 +147,8 @@ const jane = {
 	janesNewAge = await asyncJane.age(26);
 ```
 
-You can also pass `null` or `undefined` as the first argument so long as you provide a data store in the start-up options. When you do this, the first step in the dot path is considered the
-initial query key. The initial query can be re-used over and over.
+You can also pass `null` or `undefined` as the first argument, so long as you provide a data store in the start-up options. When you do this, the first step in the dot path is considered the
+initial query key. The `dotAsyncData` object can be re-used over and over with different paths.
 
 ```javascript
 const mydb = ... some data store instance,
@@ -159,10 +159,10 @@ const mydb = ... some data store instance,
 	...
 ```
 
-Finally, you can pass `{}` as the first argument and populate the object using any serializable query supported by your database, e.g. `GraphQL`. See the `$query` built-in function for more details.
+Finally, you can pass `{}` as the first argument and populate the object using any serializable query supported by your database, e.g. `GraphQL`. 
+See the `$query` built-in function for more details.
 
-
-The options surface is:
+The options surface for `dotAsyncData` is:
 
 ```javascript
 {
