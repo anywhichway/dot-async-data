@@ -1,5 +1,5 @@
-<script src="./index.js"></script>
 # dot-async-data
+<script src="./index.js"></script>
 
 Asynchronous dot notation to radically simplify JSON database access.
 
