@@ -421,7 +421,6 @@ const logger = `<script>if(window.frameElement.stdio) { while(window.frameElemen
 	});${"</"}script>`;
 
 function renderRunner(runner,scripts,runners,recursing) {
-debugger;
 	const id = runner.id,
 		editorid = runner.getAttribute("editor"),
 		targetid = runner.getAttribute("target"),
@@ -433,7 +432,7 @@ debugger;
 	let editor = document.getElementById(editorid),
 		target = document.getElementById(targetid),
 		stdio = document.getElementById(consoleid);
-	scripts = (runner.getAttribute("scripts")||"").split(";").reduce((accum,src) => accum += `<script>${src}${"</"}script>`,scripts);
+	scripts = runner.getAttribute("scripts")||"".split(";").reduce((accum,src) => accum += `<script src="${src}">${"</"}script>`,scripts);
 	if(editor) {
 		textarea.setAttribute("style",editor.getAttribute("style"));
 		editor.appendChild(textarea);
