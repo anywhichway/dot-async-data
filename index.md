@@ -432,7 +432,7 @@ function renderRunner(runner,scripts,runners,recursing) {
 	let editor = document.getElementById(editorid),
 		target = document.getElementById(targetid),
 		stdio = document.getElementById(consoleid);
-	scripts = (runner.getAtrribute("scripts")||"").split(";").reduce((accum,src) => accum += `<script>${src}${"</"}script>`,scripts);
+	scripts = (runner.getAttribute("scripts")||"").split(";").reduce((accum,src) => accum += `<script>${src}${"</"}script>`,scripts);
 	if(editor) {
 		textarea.setAttribute("style",editor.getAttribute("style"));
 		editor.appendChild(textarea);
