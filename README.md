@@ -450,4 +450,4 @@ Although the purpose and architecture of `dot-async` are very different, the asy
 
 2020-09-17 v0.0.1a First public release.
 
-<script src="http://downrunner.com/downrunner.js"></script>
+<script src="https://downrunner.com/downrunner.js"></script>
