@@ -136,15 +136,16 @@ This is an ALPHA release.
 
 You can make any object into an asynchronously accessable object by calling `dotAsyncData`:
 
+<downrunner id="create" console="createConsole" scripts="./index.js" async></downrunner>
 ```javascript
 const jane = {
 		"#": "/Person/#abcxyz",
 		name: "jane",
 		age: 25
 	},
-	asyncJane = dotAsyncData(jane,options),
-	janesAge = await asyncJane.age();
-	janesNewAge = await asyncJane.age(26);
+	asyncJane = dotAsyncData(jane);
+console.log(await asyncJane.age());
+console.log(await asyncJane.age(26));
 ```
 
 You can also pass `null` or `undefined` as the first argument, so long as you provide a data store in the start-up options. When you do this, the first step in the dot path is considered the
@@ -208,69 +209,98 @@ Exceptions include `$count`, `$map` and `$reduce` which handle array and non-arr
 
 For the examples below, assume the following:
 
+<downrunner id="builtIn" scripts="./index.js" editor="builtInEditor"></downrunner>
 ```javascript
-{name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]}
+var data = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary",age:null}]};
 ```
+
+If you <a href="https://anywhichway.github.io/dot-asyn-data#built-in-functions">visit this README on out GitHub pages site</a>, 
+you will be able to edit the sample data and change the behavior of the examples. For example, try changing the age of mary form `null` to `8`.
 
 $count - number of values in array that are not undefined.
 
+<downrunner for="builtIn" console="builtInCount" async></downrunner>
 ```javascript
-3 === await asyncDataObject.children[$count](); // true
-3 === await asyncDataObject.children.$count(); // true
-3 === (await object1.children()).length; // true
-2=== await asyncDataObject.children.age[$count](); // true
-2 === await asyncDataObject.children.age.$count(); // true
-2 === (await asyncDataObject.children.age()).length; // true, undefined is ALWAYS filtered out of child data
+const { $count } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children[$count]()); // 3
+console.log(await asyncDataObject.children.$count()); // 3
+console.log((await asyncDataObject.children()).length); // 3
+console.log(await asyncDataObject.children.age[$count]()); // 2, obly two children have known ages
+console.log(await asyncDataObject.children.age.$count()); // 2
+console.log((await asyncDataObject.children.age()).length); // 3, mary has age null, undefined would have bene filtered out
 ```
 
 $avg - average of numeric items in an array
 
+<downrunner for="builtIn" console="builtInAvg" async></downrunner>
 ```javascript
-7.5 === await asyncDataObject.children[$avg](); // true
-7.5 === await asyncDataObject.children.$avg; // true
+const { $avg } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$avg]()); // 7.5
+console.log(await asyncDataObject.children.age.$avg()); // 7.5
 ```
 
 $avgAll - average of all items in an array, non-numerics treated as 0
 
+<downrunner for="builtIn" console="builtInAvgAll" async></downrunner>
 ```javascript
-5 === await asyncDataObject.children[$avgAll](); // true
-5 === await asyncDataObject.children.$avgAll(); // true
+const { $avgAll } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$avgAll]()); // 5
+console.log(await asyncDataObject.children.age.$avgAll()); // 5
 ```
 
 $avgIf(test :function,default :number=0) - inline only, average of all items in an array passing `test(value)`
 
+<downrunner for="builtIn" console="builtInAvgIf" async></downrunner>
 ```javascript
-10 === await asyncDataObject.children[$avgIf(value => value>5)](); // true
+const { $avgIf } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data,{inline:true});
+console.log(await asyncDataObject.children.age[$avgIf(value => value>5)]()); // 10
 ```
 
-Note: To implete `avgAllIf`, your test function should return `true` for undefined and you should not provide a default value for undefined.
+Note: To implement `avgAllIf`, your test function should return `true` for undefined and you should not provide a `default` value for undefined.
 
 $max - max of numeric items in an array
 
+<downrunner for="builtIn" console="builtInMax" async></downrunner>
 ```javascript
-10 === await asyncDataObject.children[$max](); // true
-10 === await asyncDataObject.children.$max; // true
+const { $max } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$max]()); // 10
+console.log(await asyncDataObject.children.age.$max()); // 10
 ```
 
 $min - min of numeric items in an array
 
+<downrunner for="builtIn" console="builtInMin" async></downrunner>
 ```javascript
-5 === await asyncDataObject.children[$min](); // true
-5 === await asyncDataObject.children.$min; // true
+const { $min } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$min]()); // 10
+console.log(await asyncDataObject.children.age.$min()); // 10
 ```
 
 $sum - sum of numeric items in an array
 
+<downrunner for="builtIn" console="builtInSum" async></downrunner>
 ```javascript
-15 === await asyncDataObject.children[$sum](); // true
-15 === await asyncDataObject.children.$sum; // true
+const { $sum } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$sum]()); // 15
+console.log(await asyncDataObject.children.age.$sum()); // 15
+```
 ```
 
 $product - product of numeric items in an array
 
+<downrunner for="builtIn" console="builtInMax" async></downrunner>
 ```javascript
-50 === await asyncDataObject.children[$product](); // true
-50 === await asyncDataObject.children.$product; // true
+const { $product } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$product]()); // 50
+console.log(await asyncDataObject.children.age.$product()); // 50
 ```
 
 $values - returns the values in the array resolved if they are database keys
@@ -284,50 +314,68 @@ deepEqual(
 
 $type(type :string ) - inline but usable without options flag
 
+<downrunner for="builtIn" console="builtInType" async></downrunner>
 ```javascript
-"joe" === await asyncDataObject.name[$type("string")]();
-undefined  === await asyncDataObject.name[$type("number")]();
+const { $type } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.name[$type("string")]()); // "joe"
+console.log(await asyncDataObject.name[$type("number")]()); // undefined
 ```
 
 $lt(value :primitive)  - inline but usable without options `{inline:true}`
 
+<downrunner for="builtIn" console="builtInLT" async></downrunner>
 ```javascript
-[5] === await asyncDataObject.children.age[$lt(10)](); // true
+const { $lt } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$lt(10)]()); // [5]
 ```
 
 $lte(value :primitive)  - inline but usable without options `{inline:true}`
 
+<downrunner for="builtIn" console="builtInLTE" async></downrunner>
 ```javascript
-[5] === await asyncDataObject.children.age[$lte(5)](); // true
+const { $lte } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$lte(10)]()); // [5]
 ```
 
 $gte(value :primitive)  - inline but usable without options `{inline:true}`
 
+<downrunner for="builtIn" console="builtInGTE" async></downrunner>
 ```javascript
-[10] === await asyncDataObject.children.age[$gte(10)](); // true
+const { $gte } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$gte(10)]()); // [10]
 ```
 
 $gt(value :primitive)  - inline but usable without options `{inline:true}`
 
+<downrunner for="builtIn" console="builtInGT" async></downrunner>
 ```javascript
-[10] === await asyncDataObject.children.age[$gt(9)](); // true
+const { $gt } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children.age[$gt(9)]()); // [10]
 ```
 
-$match(pattern :any) - polymorphic, matches any value, including objects with multiple properties holding literals or `$lt`, `$lte`, `$eq`, `$eeq`, `$neq`, `$gte`, `$gte`, `$type`
+$match(pattern :any) - polymorphic, matches any value, including objects with multiple properties holding literals or `$lt`, `$lte`, `$eq`, `$eeq`, `$neq`, `$gte`, `$gte`, `$type`.
 
+<downrunner for="builtIn" console="builtInMatch" async></downrunner>
 ```javascript
-await  asyncDataObject.children[$match({age:{$lte: 5},name:"janet"})]() // returns an array of children that have age<=5 and name="janet
-
+const { $match } = dotAsyncData,
+	asyncDataObject = dotAsyncData(data);
+console.log(await asyncDataObject.children[$match({age:{$lte: 5},name:"janet"})]()) 
+// returns an array of children that have age<=5 and name="janet
 ```
 
-$query(formatter :function||:string) - inline only (for now)
+$query(formatter :function&#124;:string) - inline only (for now)
 
 Takes the current property name, value provided by an inline function, or terminal value for the path and passes it to the `formatter` function. The string value returned by the formatter function
 will be passed to `db.query` (with `db` being the database wrapper provided when the `dotAsyncData` object was created) and results will be passed down the path.
 
 If a `string` is passed to `$query`, the string is treated as an interpolation and the varibale `$value` is available for resolution.
 
-Using this capability you can query a server using SQL, GraphQl, Mongo query language, etc. You just need to provide an adapter that passes the string to you server and returns parsed JSON.
+Using this capability you can query a server using SQL, GraphQL, Mongo query language, etc. You just need to provide an adapter that passes the string to your server and returns parsed JSON.
 
 ```javascript
 await asyncDataObject.name[$query("SELECT ${$value} FROM Contacts OUTPUT JSON")]();
@@ -396,4 +444,6 @@ Although the purpose and architecture of `dot-async` are very different, the asy
 
 2020-09-18 v0.0.2a Simplified internals. Added support for inline named functions from exports and multi-faceted RegExp matched for array values or individual keys.
 
-2020-09-17 v0.0.1a First public release
+2020-09-17 v0.0.1a First public release.
+
+<script src="./downrunner.js"></script>
