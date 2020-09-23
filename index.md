@@ -148,7 +148,6 @@ console.log(await asyncJane.age());
 console.log(await asyncJane.age(26));
 ```
 
-
 You can also pass `null` or `undefined` as the first argument, so long as you provide a data store in the start-up options. When you do this, the first step in the dot path is considered the
 initial query key. The `dotAsyncData` object can be re-used over and over with different paths.
 
@@ -210,19 +209,21 @@ Exceptions include `$count`, `$map` and `$reduce` which handle array and non-arr
 
 For the examples below, assume the following:
 
+<downrunner id="builtIn" scripts="./index.js" editor="builtInEditor"></downrunner>
 ```javascript
-{name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]}
+var data = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]}
 ```
 
 $count - number of values in array that are not undefined.
 
+<downrunner for="builtIn" scripts="./index.js" console="builtInChildCount" async></downrunner>
 ```javascript
-3 === await asyncDataObject.children[$count](); // true
-3 === await asyncDataObject.children.$count(); // true
-3 === (await object1.children()).length; // true
-2=== await asyncDataObject.children.age[$count](); // true
-2 === await asyncDataObject.children.age.$count(); // true
-2 === (await asyncDataObject.children.age()).length; // true, undefined is ALWAYS filtered out of child data
+console.log(await asyncDataObject.children[$count]()); // 3
+console.log(await asyncDataObject.children.$count()); // 3
+console.log(await object1.children()).length); // 3
+console.log(await asyncDataObject.children.age[$count]()); // 2, obly two chuld have known ages
+console.log(await asyncDataObject.children.age.$count()); // 2
+console.log((await asyncDataObject.children.age()).length); // 2, undefined is ALWAYS filtered out of child data
 ```
 
 $avg - average of numeric items in an array
@@ -472,7 +473,7 @@ function renderRunner(runner,scripts,runners,recursing) {
 	if(consoleid && !stdio) {
 		stdio = document.createElement("div");
 		stdio.className = "downrunner-console";
-		stdio.setAttribute("style","border: solid grey 1px");
+		stdio.setAttribute("style","border: solid grey 1px; padding-bottom:.5em");
 		stdio.setAttribute("id",consoleid);
 		//stdio.innerHTML = '<div style="width:100%">&gt; <textarea style="width:95%;resize:none;height:1.5em" id="intepreter" onchange="event.target.value = eval(event.target.value)"></textarea></div>';
 		stdio.innerHTML = `<div>&gt;</div>`;
