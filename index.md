@@ -1,5 +1,4 @@
 # dot-async-data
-<script src="./index.js"></script>
 
 Asynchronous dot notation to radically simplify JSON database access.
 
@@ -137,7 +136,7 @@ This is an ALPHA release.
 
 You can make any object into an asynchronously accessable object by calling `dotAsyncData`:
 
-<downrunner id="create" console="createConsole"></downrunner>
+<downrunner id="create" console="createConsole" scripts="./index.js"></downrunner>
 ```javascript
 (() => {
 	const jane = {
@@ -433,6 +432,7 @@ function renderRunner(runner,scripts,runners,recursing) {
 	let editor = document.getElementById(editorid),
 		target = document.getElementById(targetid),
 		stdio = document.getElementById(consoleid);
+	scripts = (runner.getAtrribute("scripts")||"").split(";").reduce((accum,src) => accum += `<script>${src}${"</"}script>`,scripts);
 	if(editor) {
 		textarea.setAttribute("style",editor.getAttribute("style"));
 		editor.appendChild(textarea);
