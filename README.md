@@ -365,7 +365,7 @@ $match(pattern :any) - polymorphic, matches any value, including objects with mu
 <downrunner for="builtIn" console="builtInMatch" async></downrunner>
 ```javascript
 const { $match } = dotAsyncData,
-	asyncDataObject = dotAsyncData(data);
+	asyncDataObject = dotAsyncData(data,{inline:true});
 console.log(await asyncDataObject.children[$match({age:{$lte: 5},name:"janet"})]()) 
 // returns an array of children that have age<=5 and name="janet
 ```
