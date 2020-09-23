@@ -220,7 +220,7 @@ $count - number of values in array that are not undefined.
 ```javascript
 console.log(await asyncDataObject.children[$count]()); // 3
 console.log(await asyncDataObject.children.$count()); // 3
-console.log(await object1.children()).length); // 3
+console.log(await asyncDataObject.children()).length); // 3
 console.log(await asyncDataObject.children.age[$count]()); // 2, obly two chuld have known ages
 console.log(await asyncDataObject.children.age.$count()); // 2
 console.log((await asyncDataObject.children.age()).length); // 2, undefined is ALWAYS filtered out of child data
