@@ -143,9 +143,9 @@ const jane = {
 		name: "jane",
 		age: 25
 	},
-	asyncJane = dotAsyncData(jane,options),
-	console.log(await asyncJane.age());
-	console.log(wait asyncJane.age(26));
+	asyncJane = dotAsyncData(jane,options);
+console.log(await asyncJane.age());
+console.log(await asyncJane.age(26));
 ```
 
 
