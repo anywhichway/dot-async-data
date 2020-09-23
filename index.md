@@ -136,18 +136,16 @@ This is an ALPHA release.
 
 You can make any object into an asynchronously accessable object by calling `dotAsyncData`:
 
-<downrunner id="create" console="createConsole" scripts="./index.js"></downrunner>
+<downrunner id="create" console="createConsole" scripts="./index.js" async></downrunner>
 ```javascript
-(() => {
-	const jane = {
-			"#": "/Person/#abcxyz",
-			name: "jane",
-			age: 25
-		},
-		asyncJane = dotAsyncData(jane);
-	console.log(await asyncJane.age());
-	console.log(await asyncJane.age(26));
-})();
+const jane = {
+		"#": "/Person/#abcxyz",
+		name: "jane",
+		age: 25
+	},
+	asyncJane = dotAsyncData(jane);
+console.log(await asyncJane.age());
+console.log(await asyncJane.age(26));
 ```
 
 
@@ -425,6 +423,7 @@ function renderRunner(runner,scripts,runners,recursing) {
 		editorid = runner.getAttribute("editor"),
 		targetid = runner.getAttribute("target"),
 		consoleid = runner.getAttribute("console"),
+		asyncy = runner.hasAttribute("async"),
 		el = runner.nextElementSibling,
 		language = el.getAttribute("class").split(" ").find(item => item.startsWith("language-")).substring(9),
 		textarea = document.createElement("textarea");
@@ -439,7 +438,8 @@ function renderRunner(runner,scripts,runners,recursing) {
 		const s = scripts.substring();
 		textarea.addEventListener("change",(event) => {
 			if(language==="javascript") {
-				const scripts = s + `<script type="application/${language}">${editor.value}${"</"}script>`;
+				const value = asyncy ? `(async () => { ${editor.value} })()` : editor.value;
+					scripts = s + `<script type="application/${language}">${value}${"</"}script>`;
 				if(target) {
 					const iframe = document.createElement("iframe");
 					iframe.setAttribute("srcdoc",scripts);
@@ -466,7 +466,8 @@ function renderRunner(runner,scripts,runners,recursing) {
 	}
 	editor = textarea;
 	if(language==="javascript") {
-		scripts = scripts + `<script type="application/${language}">${editor.value}${"</"}script>`;
+		const value = asyncy ? `(async () => { ${editor.value} })()` : editor.value;
+		scripts = scripts + `<script type="application/${language}">${value}${"</"}script>`;
 	}
 	if(consoleid && !stdio) {
 		stdio = document.createElement("div");
