@@ -211,12 +211,12 @@ For the examples below, assume the following:
 
 <downrunner id="builtIn" scripts="./index.js" editor="builtInEditor"></downrunner>
 ```javascript
-var data = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]}
+var asyncDataObject = {name:"joe",children:[{name:"janet",age:5},{name:"jon",age:10},{name:"mary"}]}
 ```
 
 $count - number of values in array that are not undefined.
 
-<downrunner for="builtIn" scripts="./index.js" console="builtInChildCount" async></downrunner>
+<downrunner for="builtIn" console="builtInCount" async></downrunner>
 ```javascript
 console.log(await asyncDataObject.children[$count]()); // 3
 console.log(await asyncDataObject.children.$count()); // 3
