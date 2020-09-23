@@ -193,10 +193,9 @@ dotAsyncObject[/*.Address/].city(); // cities for all data in fields ending in A
 ```javascript
 dotAsyncObject.children.$avg.age(); // the average age of the children
 dotAsyncObject.children[$avg].age(); 
-
 ```
 
-See [built-in functions](#built-in-functions) below for additional concrete examples.
+See [built-in functions](#built-in-functions) below for additional concrete and interactive examples.
 
 If a dot path can't be resolved it will simply return `undefined`. No more errors half way down a path because of a missing entity! (We will probably add a `strict` mode
 if you want the errors).
@@ -434,6 +433,8 @@ As a result on both of the above, inline functions and regular expressions must 
 Although the purpose and architecture of `dot-async` are very different, the asychronous dot notation was inspired by the fabulous [GunDB](https://gun.eco/).
 
 # Release History (reverse chronological order)
+
+2020-09-23 v0.0.8a Downrunner enabled interactive README.
 
 2020-09-21 v0.0.7a Documentation updates. $match completion.
 
