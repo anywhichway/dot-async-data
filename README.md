@@ -20,7 +20,7 @@ What if you could:
 
 4) Do this with ANY JSON database that supports `get(key)` and `set(key,value)` and even pass queries to a GraphQL or SQL API!
 
-If you <a href="https://anywhichway.github.io/dot-async-data#creating-an-async-data-object">visit this README on our GitHub pages site</a>, 
+If you vist the [![Generic badge](https://img.shields.io/badge/Downrunner-Runnable-green.svg)](https://anywhichway.github.io/dot-async-data/#creating-an-async-data-object) README on our GitHub pages site, 
 you will be able to see the output of most sample code and be able edit sample data and change the behavior of some of the examples. 
 
 ## Example
