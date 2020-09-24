@@ -1,6 +1,6 @@
 # dot-async-data
 
-[![Generic badge](https://img.shields.io/badge/Downrunner-Runable-green.svg)](https://anywhichway.github.io/dot-async-data/)
+[![Generic badge](https://img.shields.io/badge/Downrunner-Runnable-green.svg)](https://anywhichway.github.io/dot-async-data/)
 
 Asynchronous dot notation to radically simplify JSON database access.
 
