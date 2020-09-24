@@ -1,5 +1,7 @@
 # dot-async-data
 
+[![Generic badge](https://img.shields.io/badge/Downrunner-Runable-green.svg)](https://anywhichwa.github.io/dot-async-data/)
+
 Asynchronous dot notation to radically simplify JSON database access.
 
 Frustrated by complex code to navigate through related JSON objects?
