@@ -254,7 +254,7 @@
 					}
 					const handler = handlers[property];
 					if(handler) {
-						return (cb) => { handler(listeners,path.slice(),cb); return proxy; }
+						return (cb) => { handler(listeners,path.slice(),cb); return proxy; };
 					}
 					path[length] = property;
 					const {idKey,db,cache={}} = options;
