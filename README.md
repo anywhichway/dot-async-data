@@ -1,6 +1,7 @@
 # dot-async-data
 
 [![Generic badge](https://img.shields.io/badge/Downrunner-Runnable-green.svg)](https://anywhichway.github.io/dot-async-data/)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/c6d84499e5c64374baba89d42874c078)](https://www.codacy.com/manual/syblackwell/dot-async-data/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=anywhichway/dot-async-data&amp;utm_campaign=Badge_Grade)
 [![Generic badge](https://img.shields.io/badge/GitHub-Repsitory-green.svg)](https://www.github.com/anywhichway/dot-async-data)
 
 Asynchronous dot notation to radically simplify JSON database access.
@@ -99,13 +100,13 @@ will load the referenced objects and extract the destructured properties from th
 }
 ```
 
-# Installing
+## Installing
 
-```
+```npm
 npm install dot-async-data
 ```
 
-# Using
+## Using
 
 `dot-async-data` is isomorphic, the `index.js` file can be loaded in a browser or required by NodeJS code.
 
@@ -138,7 +139,7 @@ See the files `test/index.html` and `test/index.js` for basic examples while we 
 
 This is an ALPHA release.
 
-## Creating An Async Data Object
+### Creating An Async Data Object
 
 You can make any object into an asynchronously accessable object by calling `dotAsyncData`:
 
@@ -182,7 +183,7 @@ The options surface for `dotAsyncData` is:
 }
 ```
 
-## Path Access
+### Path Access
 
 Once you have a `dotAsyncData` object, you can access it to any depth using standard dot notation, just put an `await` at the start and finish it with `()`.
 
@@ -203,7 +204,7 @@ See [built-in functions](#built-in-functions) below for additional concrete and 
 If a dot path can't be resolved it will simply return `undefined`. No more errors half way down a path because of a missing entity! (We will probably add a `strict` mode
 if you want the errors).
 
-## Built-in Functions
+### Built-in Functions
 
 Unless otherwise noted, built-in functions can be access via inline square brackets or dot notation, e.g. `value[$max]` and `value.$max`. With some noted exceptions, 
 if a function is flagged as inline, then to use it the `dotAsyncData` object must have been created with `{inline:true}`.
@@ -395,7 +396,7 @@ $map(mapper :function) - inline only, polymorphic
 
 $reduce(reducer :function[,accumulator]) - inline only, polymorphic
 
-## Regular Expressions
+### Regular Expressions
 
 Regular expressions can be used to match either property names in the dotted path or the value at the end of the path, e.g.
 
@@ -404,7 +405,7 @@ Regular expressions can be used to match either property names in the dotted pat
 ["janet","jon"] = await asyncDataObject.children.name[/j.*/]();
 ```
 
-## Custom Inline Functions
+### Custom Inline Functions
 
 Custom inline functions can be used to transform data so long as they do not contain closures, e.g.:
 
@@ -414,7 +415,7 @@ Custom inline functions can be used to transform data so long as they do not con
 ```
 Functions containing closures will usually silently fail and the path will resolve to `undefined`.
 
-# Internals
+## Internals
 
 `dotAsyncData` objects are Proxies around Functions that maintain a closure around property access requests and the values to which they resolve.
 
@@ -422,7 +423,7 @@ The functions and regular expressions used within access paths take advantage of
 the JavaScript engine checks the syntax when `[]` is initially processed, the string version of the functions and regular expressions that form property names are known to be reversable into 
 actual functions and regular expressions, unless a function contains a closure.
 
-# Security
+## Security
 
 Using inline functions and regular expressions in the browser brings along some security issues related to code injection. It is recommeded you not implement
 a form based mechanism for defining queries unless you fully understand the issues related to code injection.
@@ -431,11 +432,13 @@ a form based mechanism for defining queries unless you fully understand the issu
 
 As a result on both of the above, inline functions and regular expressions must be explicitly turned on when creating a `dotAsyncData` object by using `{inline:true}`.
 
-# Acknowledgements
+## Acknowledgements
 
 Although the purpose and architecture of `dot-async` are very different, the asychronous dot notation was inspired by the fabulous [GunDB](https://gun.eco/).
 
-# Release History (reverse chronological order)
+## Release History (reverse chronological order)
+
+2020-09-23 v0.0.9a Codacy driven quality improvements.
 
 2020-09-23 v0.0.8a Downrunner enabled interactive README.
 

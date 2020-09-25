@@ -156,7 +156,7 @@ describe("dotAsyncData",async function() {
 	it("get related unresolved",async () => {
 		const value = await object1.children();
 		expect(value.length).to.equal(3);
-		expect(value.every(item => isDataKey(item))).to.equal(true);
+		expect(value.every((item) => isDataKey(item))).to.equal(true);
 	});
 	it("get with property",async () => {
 		const value = await object1.children.name();
@@ -203,7 +203,7 @@ describe("dotAsyncData",async function() {
 		expect(value).to.equal(5);
 	});
 	it("get avgIf",async () => {
-		const value = await object1.children[$avgIf(value => value>5||value===undefined,0)].age();
+		const value = await object1.children[$avgIf((value) => value>5||value===undefined,0)].age();
 		expect(value).to.equal(5);
 	});
 	it("get min",async () => {
@@ -255,11 +255,11 @@ describe("dotAsyncData",async function() {
 		const value = await object1.children[(values) => values.reduce((accum,{age}) => age===undefined ? accum : (accum.push(age),accum),[])]();
 		expect(Array.isArray(value)).to.equal(true);
 		expect(value.length).to.equal(2);
-		expect(value.every(item => typeof(item)==="number")).to.equal(true);
+		expect(value.every((item) => typeof(item)==="number")).to.equal(true);
 	});
 	it("map",async () => {
 		const value = await object1.children[$map((child) => { 
-			if(child.age<21) { child.minor = true }
+			if(child.age<21) { child.minor = true; }
 			return child;
 		})]();
 		expect(Array.isArray(value)).to.equal(true);
@@ -277,7 +277,7 @@ describe("dotAsyncData",async function() {
 	});
 	it("reduce",async () => {
 		const value = await object1.children[$reduce((accum,child) => { 
-			if(child.age) { accum.push(child) }
+			if(child.age) { accum.push(child); }
 			return accum;
 		},[])]();
 		expect(Array.isArray(value)).to.equal(true);

@@ -1,4 +1,5 @@
 (function() {
+	"use strict";
 	const handlers = {
 		$onchange(listeners,path,cb) {
 			listeners.on.change.push([path,cb]);
@@ -9,142 +10,7 @@
 		$onsave(listeners,path,cb) {
 			listeners.on.save.push([path,cb]);
 		}
-	}
-	
-	const listeners = {on:{change:[],delete:[],save:[]}};
-	function dotAsyncData(value,options={},path=[]) {
-		path = path.slice();
-		const length = path.length, // fix length to this level of the proxy
-			f = () => {},
-			initialvalue = value;
-			proxy = new Proxy(f,{
-				get(target,property) {
-					if(property==="then") {
-						return target[property]
-					}
-					if(property==="$flush") {
-						return () => {
-							if(options.cache) {
-								Object.keys(options.cache).reduce((accum,key) => { delete accum[key]; return accum; },options.cache)
-							}
-							return proxy;
-						}
-					}
-					const handler = handlers[property];
-					if(handler) {
-						return (cb) => { handler(listeners,path.slice(),cb); return proxy; }
-					}
-					path[length] = property;
-					const {idKey,db,cache={}} = options;
-					if(initialvalue==null && db && length===0) {
-						value = {[property]:db.get(property)};
-					}
-					if(cache[value[idKey]]) { // mat have been updated by a different Proxy
-						value = cache[value[idKey]];
-					}
-					return dotAsyncData(value,options,path,listeners);
-				},
-				async apply(_,thisArg,argumentsList) {
-					const ctx = typeof(thisArg)==="function" ? await value : thisArg|| await value;
-					path = path.slice(0,length);
-					return exec(ctx,path,argumentsList.length,argumentsList[0],options,ctx,listeners);
-				}
-			});
-		return proxy;
-	}
-	
-	const joqular = {
-		$lt: (value,test) => value < test,
-		$lte: (value,test) => value <= test,
-		$eq: (value,test) => value == test,
-		$eeq: (value,test) => value === test,
-		$neq: (value,test) => value != test,
-		$gte: (value,test) => value >= test,
-		$gt: (value,test) => value > test,
-		$type: (value,type) => typeof(value)===type,
-		$match: (value,pattern) => {
-			const vtype = typeof(value);
-			let	ptype = typeof(pattern);
-			if(ptype==="function") {
-				pattern = pattern(value);
-				ptype = typeof(pattern);
-			}
-			if(value===pattern) return true;
-			if(ptype==="object") {
-				for(const key in pattern) {
-					if(joqular[key]) {
-						if(!joqular[key](value,pattern[key])) return undefined;
-					}
-				}
-				if(value!=null) {
-					if(pattern.length!==undefined && value.length!==pattern.length) return undefined;
-					if(pattern.size!==undefined && value.size!==pattern.size) return undefined;
-				}
-				for(const key in pattern) {
-					if(!joqular[key] && !joqular.$match(value[key],pattern[key])) return undefined;
-				}
-				return value;
-			}
-			return undefined;
-		}
-	}
-	
-	const objectAccessors = {
-		$count: function $count(values) { return Array.isArray(values) ? values.filter(item => item!=undefined).length : values==undefined ? 0 : 1 },
-		$type: (type) => `typeof(values)==="${type}"`,
-		$lt: (value) => `<${typeof(value)==="string" ? "'" + value + "'" : value}`,
-		$lte: (value) => `<=${typeof(value)==="string" ? "'" + value + "'" : value}`,
-		$gte: (value) => `>=${typeof(value)==="string" ? "'" + value + "'" : value}`,
-		$gt: (value) => `>${typeof(value)==="string" ? "'" + value + "'" : value}`,
-		$avg:  function $avg(values) { let i=0; return values.reduce((accum,value) => typeof(value)==="number" && !isNaN(value) ? (i++,accum+=value) : accum,0)/i; },
-		$avgAll: function $avgAll(values) { let i=0; return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) ? (i++,accum+=value) : (i++,accum),0)/i; },
-		$avgIf: (test,dflt=0) => `(values) => {let i=0; return values.reduce((accum,value) => (${test})(value) ? (i++,accum+=(typeof(value)==="number"  && !isNaN(value) ? value : ${dflt})) : accum,0)/i; }`,
-		$min:  function $min(values) { return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) && value < accum ? value : accum,Infinity) },
-		$max:  function $max(values) { return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) && value > accum ? value : accum,-Infinity) },
-		$sum:  function $sum(values) { return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) ? value += accum : accum,0) },
-		$product: function $product(values) { return values.reduce((accum,value) => typeof(value)==="number" ? value *= accum : accum,1) },
-		$values: function $values(values) { return values },
-		$map: (f) => `(value) => value.map(${f+""})`,
-		$reduce: (f,accum) => accum!==undefined ? `(value) => value.reduce(${f},${JSON.stringify(accum)})` :  `(value) => value.reduce(${f})`,
-		$match: (pattern) => `(values) => {
-			if(Array.isArray(values)) {
-				return values.filter((value) => $match(value,${JSON.stringify(pattern)}))
-			}
-			return $match(values,${JSON.stringify(pattern)})
-		}`,
-		$get: async function $get(values,{$db}) {
-			if(Array.isArray(values)) {
-				const results = [];
-				for(const key of values) {
-					const result = await $db.get(key);
-					if(result!=null) {
-						results.push(result);
-					}
-				}
-				return results;
-			} else {
-				return $db.get(values);
-			}
-		},
-		$set: (value) => `async (values,{$db}) => {
-			const value = ${typeof(value)==="string" || typeof(value)==="object" ? JSON.stringify(value) : value};
-			if(Array.isArray(values)) {
-				const results = [];
-				for(const key of values) {
-					await $db.set(key,value);
-					if(result!=null) {
-						results.push(value);
-					}
-				}
-				return results;
-			} else {
-				await $db.set(values,value);
-				return value;
-			}
-		}`,
-		$query: (value) => typeof(value)==="string" ? `async ($value,{$db}) => { return $db.query(\`${value}\`) }` :  `async (value,{$db}) => { return $db.query((${value})(value)) }`
-	}
-	
+	};
 	
 	async function exec(target,path,argCount,arg,{isDataKey,idKey,db,autoSave,inline,cache}={},previous,listeners,recursing) {
 		const cacheGet =  async (key) => cache ? cache[key]||(cache[key] =  await db.get(key)) : await db.get(key),
@@ -366,6 +232,140 @@
 		}
 		return value;
 	}
+	
+	const listeners = {on:{change:[],delete:[],save:[]}};
+	function dotAsyncData(value,options={},path=[]) {
+		path = path.slice();
+		const length = path.length, // fix length to this level of the proxy
+			f = () => {},
+			initialvalue = value,
+			proxy = new Proxy(f,{
+				get(target,property) {
+					if(property==="then") {
+						return target[property]
+					}
+					if(property==="$flush") {
+						return () => {
+							if(options.cache) {
+								Object.keys(options.cache).reduce((accum,key) => { delete accum[key]; return accum; },options.cache)
+							}
+							return proxy;
+						}
+					}
+					const handler = handlers[property];
+					if(handler) {
+						return (cb) => { handler(listeners,path.slice(),cb); return proxy; }
+					}
+					path[length] = property;
+					const {idKey,db,cache={}} = options;
+					if(initialvalue==null && db && length===0) {
+						value = {[property]:db.get(property)};
+					}
+					if(cache[value[idKey]]) { // may have been updated by a different Proxy
+						value = cache[value[idKey]];
+					}
+					return dotAsyncData(value,options,path,listeners);
+				},
+				async apply(_,thisArg,argumentsList) {
+					const ctx = typeof(thisArg)==="function" ? await value : thisArg|| await value;
+					path = path.slice(0,length);
+					return exec(ctx,path,argumentsList.length,argumentsList[0],options,ctx,listeners);
+				}
+			});
+		return proxy;
+	}
+	
+	const joqular = {
+		$lt: (value,test) => value < test,
+		$lte: (value,test) => value <= test,
+		$eq: (value,test) => value == test,
+		$eeq: (value,test) => value === test,
+		$neq: (value,test) => value != test,
+		$gte: (value,test) => value >= test,
+		$gt: (value,test) => value > test,
+		$type: (value,type) => typeof(value)===type,
+		$match: (value,pattern) => {
+			const vtype = typeof(value);
+			let	ptype = typeof(pattern);
+			if(ptype==="function") {
+				pattern = pattern(value);
+				ptype = typeof(pattern);
+			}
+			if(value===pattern) return true;
+			if(ptype==="object") {
+				for(const key in pattern) {
+					if(joqular[key]) {
+						if(!joqular[key](value,pattern[key])) return undefined;
+					}
+				}
+				if(value!=null) {
+					if(pattern.length!==undefined && value.length!==pattern.length) return undefined;
+					if(pattern.size!==undefined && value.size!==pattern.size) return undefined;
+				}
+				for(const key in pattern) {
+					if(!joqular[key] && !joqular.$match(value[key],pattern[key])) return undefined;
+				}
+				return value;
+			}
+			return undefined;
+		}
+	}
+	
+	const objectAccessors = {
+		$count: function $count(values) { return Array.isArray(values) ? values.filter(item => item!==undefined).length : values==undefined ? 0 : 1 },
+		$type: (type) => `typeof(values)==="${type}"`,
+		$lt: (value) => `<${typeof(value)==="string" ? "'" + value + "'" : value}`,
+		$lte: (value) => `<=${typeof(value)==="string" ? "'" + value + "'" : value}`,
+		$gte: (value) => `>=${typeof(value)==="string" ? "'" + value + "'" : value}`,
+		$gt: (value) => `>${typeof(value)==="string" ? "'" + value + "'" : value}`,
+		$avg:  function $avg(values) { let i=0; return values.reduce((accum,value) => typeof(value)==="number" && !isNaN(value) ? (i++,accum+=value) : accum,0)/i; },
+		$avgAll: function $avgAll(values) { let i=0; return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) ? (i++,accum+=value) : (i++,accum),0)/i; },
+		$avgIf: (test,dflt=0) => `(values) => {let i=0; return values.reduce((accum,value) => (${test})(value) ? (i++,accum+=(typeof(value)==="number"  && !isNaN(value) ? value : ${dflt})) : accum,0)/i; }`,
+		$min:  function $min(values) { return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) && value < accum ? value : accum,Infinity); },
+		$max:  function $max(values) { return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) && value > accum ? value : accum,-Infinity); },
+		$sum:  function $sum(values) { return values.reduce((accum,value) => typeof(value)==="number"  && !isNaN(value) ? value += accum : accum,0); },
+		$product: function $product(values) { return values.reduce((accum,value) => typeof(value)==="number" ? value *= accum : accum,1); },
+		$values: function $values(values) { return values; },
+		$map: (f) => `(value) => value.map(${f+""})`,
+		$reduce: (f,accum) => accum!==undefined ? `(value) => value.reduce(${f},${JSON.stringify(accum)})` :  `(value) => value.reduce(${f})`,
+		$match: (pattern) => `(values) => {
+			if(Array.isArray(values)) {
+				return values.filter((value) => $match(value,${JSON.stringify(pattern)}))
+			}
+			return $match(values,${JSON.stringify(pattern)})
+		}`,
+		$get: async function $get(values,{$db}) {
+			if(Array.isArray(values)) {
+				const results = [];
+				for(const key of values) {
+					const result = await $db.get(key);
+					if(result!=null) {
+						results.push(result);
+					}
+				}
+				return results;
+			} else {
+				return $db.get(values);
+			}
+		},
+		$set: (value) => `async (values,{$db}) => {
+			const value = ${typeof(value)==="string" || typeof(value)==="object" ? JSON.stringify(value) : value};
+			if(Array.isArray(values)) {
+				const results = [];
+				for(const key of values) {
+					await $db.set(key,value);
+					if(result!=null) {
+						results.push(value);
+					}
+				}
+				return results;
+			} else {
+				await $db.set(values,value);
+				return value;
+			}
+		}`,
+		$query: (value) => typeof(value)==="string" ? `async ($value,{$db}) => { return $db.query(\`${value}\`) }` :  `async (value,{$db}) => { return $db.query((${value})(value)) }`
+	};
 	
 	if(typeof(module)!=="undefined") {
 		module.exports = dotAsyncData;
